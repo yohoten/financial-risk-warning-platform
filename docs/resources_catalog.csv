@@ -1,0 +1,35 @@
+id,type,title,authors,year,journal_or_platform,url,download_channel,access_difficulty,notes
+P01,paper_en,"Financial Ratios, Discriminant Analysis and the Prediction of Corporate Bankruptcy","Altman, E. I.",1968,The Journal of Finance,https://doi.org/10.1111/j.1540-6261.1968.tb00843.x,Google Scholar / Sci-Hub,Easy,Classic Z-Score paper; open access via JSTOR
+P02,paper_en,"ZETA Analysis: A New Model to Identify Bankruptcy Risk of Corporations","Altman, E. I., Haldeman, R. G., & Narayanan, P.",1977,Journal of Banking & Finance,https://doi.org/10.1016/0378-4266(77)90017-1,ScienceDirect / Sci-Hub,Medium,Elsevier paywall; Sci-Hub available
+P03,paper_en,Financial Ratios as Predictors of Failure,"Beaver, W. H.",1966,Journal of Accounting Research,https://doi.org/10.2307/2490171,JSTOR / Google Scholar,Easy,Open access via JSTOR
+P04,paper_en,"Aggregate Confusion: The Divergence of ESG Ratings","Berg, F., Kölbel, J. F., & Rigobon, R.",2022,Review of Finance,https://doi.org/10.1093/rof/rfac033,Oxford Academic / SSRN,Easy,Open access
+P05,paper_en,Financial Distress Prediction with XGBoost and SHAP: An Application to SME Credit Risk,"Chen, Y., Liang, C., & Yang, S.",2022,Engineering Applications of Artificial Intelligence,https://doi.org/10.1016/j.engappai.2022.105382,ScienceDirect / Sci-Hub,Medium,Elsevier paywall
+P06,paper_en,"Why Is Corporate Virtue in the Eye of the Beholder? The Case of ESG Ratings","Christensen, D. M., Serafeim, G., & Sikochi, A.",2022,The Accounting Review,https://doi.org/10.2308/TAR-2019-0546,SSRN / AAA Digital Library,Medium,SSRN preprint available
+P07,paper_en,Explainable Machine Learning Models of Consumer Credit Risk,"Davis, R., Lo, A. W., Mishra, S., et al.",2023,The Journal of Financial Data Science,https://doi.org/10.3905/jfds.2023.1.130,CFA Institute / SSRN,Medium,CFA Institute members free
+P08,paper_en,Machine Learning and Deep Learning for Bankruptcy Prediction: A Systematic Literature Review,"Dasilas, A., & Rigani, A.",2024,Expert Systems with Applications,https://doi.org/10.1016/j.eswa.2024.124782,ScienceDirect / Sci-Hub,Medium,Elsevier paywall
+P09,paper_en,Financial Distress Prediction for Small and Medium Enterprises Using Machine Learning Techniques,"Gao, Y., Jiang, B., & Zhou, J.",2023,arXiv,https://arxiv.org/abs/2302.12118,arXiv,Easy,Free preprint; direct PDF download
+P10,paper_en,Why Do Tree-Based Models Still Outperform Deep Learning on Typical Tabular Data?,"Grinsztajn, L., Oyallon, E., & Varoquaux, G.",2022,NeurIPS 2022,https://proceedings.neurips.cc/paper_files/paper/2022/hash/03a914d6c5e5-Abstract-Conference.html,NeurIPS Proceedings,Easy,Open access conference paper
+P11,paper_en,Deep Learning versus Traditional Machine Learning for Credit Scoring,"Gunnarsson, B. R., Sepúlveda, S., & Óskarsdóttir, M.",2021,The Journal of Financial Data Science,https://doi.org/10.3905/jfds.2021.3.2.001,CFA Institute / SSRN,Medium,CFA Institute members free
+P12,paper_en,Financial Distress Prediction Using XGBoost with Improved SHAP Interpretation,"Liu, W., Fan, H., Xia, M., & Pang, C.",2022,Engineering Applications of Artificial Intelligence,https://doi.org/10.1016/j.engappai.2022.105412,ScienceDirect / Sci-Hub,Medium,Elsevier paywall
+P13,paper_en,A Unified Approach to Interpreting Model Predictions,"Lundberg, S. M., & Lee, S.-I.",2017,NeurIPS 2017,https://proceedings.neurips.cc/paper/2017/hash/8a20a8621978632d7cacfb0f8b61ad13-Abstract.html,NeurIPS Proceedings,Easy,Open access; foundational SHAP paper
+P14,paper_en,From Local Explanations to Global Understanding with Explainable AI for Trees,"Lundberg, S. M., Erion, G., & Lee, S.-I.",2020,Nature Machine Intelligence,https://doi.org/10.1038/s42256-019-0138-9,Nature / PubMed Central,Easy,Open access via PMC
+P15,paper_en,"On the Pricing of Corporate Debt: The Risk Structure of Interest Rates","Merton, R. C.",1974,The Journal of Finance,https://doi.org/10.1111/j.1540-6261.1974.tb03058.x,Google Scholar / JSTOR,Easy,Classic KMV foundation; widely available
+P16,paper_en,Financial Ratios and the Probabilistic Prediction of Bankruptcy,"Ohlson, J. A.",1980,Journal of Accounting Research,https://doi.org/10.2307/2490398,JSTOR / Google Scholar,Easy,Open access via JSTOR
+P17,paper_en,Financial Sentiment Analysis on News and Reports Using Large Language Models and FinBERT,"Shen, Y., & Zhang, P. K.",2024,arXiv,https://arxiv.org/abs/2410.01987,arXiv,Easy,Free preprint; direct PDF download
+P18,paper_en,Methodological Issues Related to the Estimation of Financial Distress Prediction Models,"Zmijewski, M. E.",1984,Journal of Accounting Research,https://doi.org/10.2307/2490708,JSTOR / Google Scholar,Easy,Open access via JSTOR
+P19,paper_cn,ESG评级分歧对企业绿色创新效率的影响研究,"李季鹏, 李叶",2024,工业技术经济,https://doi.org/10.3969/j.issn.1004-910X.2024.10.013,知网 / 万方,Medium,CNKI subscription required
+P20,paper_cn,企业数字化转型的测度难题：基于大语言模型的新方法与新发现,"金星晔 等",2024,经济研究,,知网,Hard,Top Chinese journal; CNKI only
+P21,paper_cn,企业包容性创新的测度：基于大语言模型的新方法,"梁宇奇, 赵云辉, 付星星 等",2024,科学决策,,知网 / 万方,Medium,CNKI or Wanfang
+P22,paper_cn,基于多期超额收益法评估数据资产价值——以A企业为例,"刘尚清",2023,租售情报,,知网 / 万方,Medium,CNKI or Wanfang
+P23,paper_cn,基于lightGBM算法的信息技术类上市公司财务危机预测研究,"苗博威",2020,哈尔滨工业大学硕士论文,,知网 / 万方学位论文库,Easy,Master thesis; CNKI full text
+P24,paper_cn,基于XGBoost算法的财务造假识别研究,"王圣洁",2022,山东理工大学学报(自然科学版),,知网 / 万方,Easy,University journal; open access likely
+P25,paper_cn,ESG评级分歧与债务资本成本,"张云齐, 杨淏宇, 张笑语",2023,金融评论,,知网 / 万方,Medium,CNKI subscription
+P26,paper_cn,"ESG表现、绿色创新与企业财务绩效","陈静, 罗焰",2024,科技创业月刊,,知网 / 万方,Easy,Open access journal
+B01,blog,XGBoost+SHAP财务预警实战全流程,CSDN博主 qq_45932996,2024,CSDN Blog,https://blog.csdn.net/qq_45932996/article/details/141298400,Web browser,Easy,End-to-end code tutorial
+B02,blog,基于Streamlit的金融数据可视化分析系统,CSDN博主 2401_89566842,2024,CSDN Blog,https://blog.csdn.net/2401_89566842/article/details/156275644,Web browser,Easy,Streamlit financial dashboard tutorial
+R01,repo,BankruptcyPrediction,krisssix,2023,GitHub,https://github.com/krisssix/BankruptcyPrediction,git clone,Easy,Python bankruptcy prediction project
+R02,repo,Bankruptcy-Prediction,benfhicks,2023,GitHub,https://github.com/benfhicks/Bankruptcy-Prediction,git clone,Easy,Jupyter notebook multi-model comparison
+R03,repo,Financial_Dashboard,Sk4v,2024,GitHub,https://github.com/Sk4v/Financial_Dashboard,git clone,Easy,Streamlit financial dashboard reference
+R04,repo,FinBERT: 中文金融领域预训练语言模型,熵简科技 AI Lab,2021,GitHub,https://github.com/valuesimplex/FinBERT,git clone,Easy,Chinese financial BERT pretrained model
+D01,data_platform,CNRDS平台新用户注册须知,CNRDS,2024,CNRDS,https://www.cnrds.com,Web registration,Easy,Free basic database via campus network
+D02,data_platform,CSMAR数据库使用手册,国泰安,2024,CSMAR,https://www.gtarsc.com,Institutional access,Medium,School subscription required
