@@ -1,1 +1,51 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- 虚拟环境 ----
 .venv/
+venv/
+env/
+
+# ---- 数据与产物（体积大/可再生成，不入库）----
+data/raw/*
+!data/raw/.gitkeep
+data/cleaned/*
+!data/cleaned/.gitkeep
+data/feature_store/*
+!data/feature_store/.gitkeep
+data/external/*
+!data/external/.gitkeep
+models/artifacts/*
+!models/artifacts/.gitkeep
+cache/*
+!cache/.gitkeep
+reports/*
+!reports/.gitkeep
+docs/downloads/
+downloads/
+
+# ---- 日志与临时文件 ----
+*.log
+*.tmp
+*.part
+.DS_Store
+Thumbs.db
+
+# ---- 本地配置与密钥 ----
+.env
+.env.local
+cookies.txt
+
+# ---- 编辑器 ----
+.idea/
+.vscode/
+*.swp
+
+# ---- 训练临时目录 ----
+catboost_info/

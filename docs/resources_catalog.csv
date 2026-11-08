@@ -33,3 +33,18 @@ R03,repo,Financial_Dashboard,Sk4v,2024,GitHub,https://github.com/Sk4v/Financial_
 R04,repo,FinBERT: 中文金融领域预训练语言模型,熵简科技 AI Lab,2021,GitHub,https://github.com/valuesimplex/FinBERT,git clone,Easy,Chinese financial BERT pretrained model
 D01,data_platform,CNRDS平台新用户注册须知,CNRDS,2024,CNRDS,https://www.cnrds.com,Web registration,Easy,Free basic database via campus network
 D02,data_platform,CSMAR数据库使用手册,国泰安,2024,CSMAR,https://www.gtarsc.com,Institutional access,Medium,School subscription required
+P27,paper_en,XGBoost: A Scalable Tree Boosting System,"Chen, T., & Guestrin, C.",2016,KDD 2016,https://arxiv.org/abs/1603.02754,arXiv,Easy,Free preprint; XGBoost 原始论文
+P28,paper_en,Optuna: A Next-generation Hyperparameter Optimization Framework,"Akiba, T., Sano, S., Yanase, T., Ohta, T., & Koyama, M.",2019,KDD 2019,https://arxiv.org/abs/1907.10902,arXiv,Easy,Free preprint; TPE 采样与剪枝的理论依据
+P29,paper_en,Machine Learning Models and Bankruptcy Prediction,"Barboza, F., Kimura, H., & Altman, E.",2017,Expert Systems with Applications,https://doi.org/10.1016/j.eswa.2017.05.052,ScienceDirect / Sci-Hub,Medium,Elsevier paywall; 集成学习优于传统模型的经典证据
+P30,paper_en,Bankruptcy Prediction Using Imaged Financial Ratios and Convolutional Neural Networks,"Hosaka, T.",2019,Expert Systems with Applications,https://doi.org/10.1016/j.eswa.2018.09.024,ScienceDirect / Sci-Hub,Medium,Elsevier paywall; 深度学习对照参考
+P31,paper_cn,我国上市公司财务困境的预测模型研究,"吴世农, 卢贤义",2001,经济研究,,知网,Hard,国内财务困境预警奠基性文献
+P32,paper_cn,上市公司财务恶化预测的实证分析,"陈静",1999,会计研究,,知网,Hard,国内最早的一元/多元判别研究之一
+P33,paper_cn,财务危机预警分析判别模型,"张玲",2000,数量经济技术经济研究,,知网,Medium,国内 Z 值模型应用研究
+B03,blog,SHAP 官方文档与教程,Scott Lundberg 等,2024,Read the Docs,https://shap.readthedocs.io/en/latest/,Web browser,Easy,API 参考与四类解释图示例
+B04,blog,Streamlit 官方文档与组件库,Streamlit Inc.,2024,Streamlit Docs,https://docs.streamlit.io,Web browser,Easy,缓存/布局/多页面开发规范
+R05,repo,shap,slundberg,2024,GitHub,https://github.com/slundberg/shap,git clone,Easy,SHAP 官方实现与示例 notebook
+R06,repo,streamlit,streamlit,2024,GitHub,https://github.com/streamlit/streamlit,git clone,Easy,Streamlit 源码与示例集
+D03,data_platform,Tushare 开放数据接口,Tushare,2024,Tushare Pro,https://tushare.pro,Web registration,Easy,免费积分制；CSMAR 不可得时的保底方案
+D04,data_platform,国家统计局数据库,国家统计局,2024,国家统计局,https://data.stats.gov.cn,Web download,Easy,宏观月度/季度指标官方口径
+D05,data_platform,巨潮资讯网信息披露平台,巨潮资讯,2024,CNINFO,http://www.cninfo.com.cn,Web access,Easy,年报 PDF 与公告的权威来源
+D06,data_platform,东方财富数据中心,东方财富,2024,Eastmoney,https://data.eastmoney.com,Web access,Easy,行业/公司财务数据与新闻

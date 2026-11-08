@@ -74,6 +74,13 @@ MANUAL_PLATFORMS = ["cnki", "wanfang", "知网", "万方", "ScienceDirect",
 # ---------------------------------------------------------------------------
 def setup_logging(output_dir: str) -> logging.Logger:
     """配置日志：同时输出到控制台和文件。"""
+    # Windows 控制台默认 GBK，emoji/中文会触发 UnicodeEncodeError
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
     log_dir = Path(output_dir)
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "download_log.txt"
@@ -168,9 +175,13 @@ def build_download_url(record: dict) -> str | None:
     if arxiv_id:
         return ARXIV_PDF_TEMPLATE.format(arxiv_id=arxiv_id)
 
-    # NeurIPS proceedings → 尝试构建PDF链接
+    # NeurIPS proceedings → hash/xxx-Abstract-Conference.html ⟶ file/xxx-Paper-Conference.pdf
     if "neurips.cc" in url and "Abstract" in url:
-        pdf_url = url.replace("-Abstract-Conference.html", ".pdf")
+        pdf_url = (
+            url.replace("/hash/", "/file/")
+            .replace("-Abstract-Conference.html", "-Paper-Conference.pdf")
+            .replace("-Abstract.html", "-Paper.pdf")
+        )
         return pdf_url
 
     # 直接PDF链接
@@ -201,10 +212,15 @@ def needs_manual_download(record: dict) -> bool:
 # 下载器
 # ---------------------------------------------------------------------------
 def download_pdf(url: str, save_path: Path, logger: logging.Logger,
-                 dry_run: bool = False) -> bool:
-    """下载单个PDF文件，带进度条和重试机制。"""
+                 dry_run: bool = False, min_bytes: int = 10240) -> bool:
+    """下载单个PDF文件，带进度条、重试与 PDF 文件头校验。"""
     if dry_run:
         logger.info(f"[DRY-RUN] 将下载: {url} → {save_path}")
+        return True
+
+    # 断点续传：已存在且体积合理的文件直接跳过
+    if save_path.exists() and save_path.stat().st_size > min_bytes:
+        logger.info(f"⏭️ 已存在，跳过: {save_path.name}")
         return True
 
     for attempt in range(1, MAX_RETRIES + 1):
@@ -223,6 +239,14 @@ def download_pdf(url: str, save_path: Path, logger: logging.Logger,
                         if chunk:
                             f.write(chunk)
                             pbar.update(len(chunk))
+
+            # 校验：PDF 必须以 %PDF 开头，否则多为登录页/反爬拦截页
+            with open(save_path, "rb") as f:
+                header = f.read(5)
+            if header != b"%PDF-" or save_path.stat().st_size < min_bytes:
+                save_path.unlink(missing_ok=True)
+                logger.warning(f"⚠️ 返回内容不是有效 PDF（可能是登录页），已删除: {url}")
+                return False
 
             logger.info(f"✅ 下载成功: {save_path.name} ({save_path.stat().st_size:,} bytes)")
             return True
@@ -453,6 +477,21 @@ def print_summary(stats: dict, logger: logging.Logger):
     logger.info(f"{'='*60}")
 
 
+def list_catalog(records: list[dict]) -> None:
+    """按类型统计并打印清单概览（不发起任何网络请求）。"""
+    from collections import Counter
+
+    counts = Counter(r.get("type", "unknown") for r in records)
+    print(f"\n资源清单共 {len(records)} 条：")
+    for rtype, n in counts.most_common():
+        print(f"  {rtype:<16} {n:>3} 条")
+
+    print("\n明细：")
+    for r in records:
+        channel = r.get("download_channel", "-")
+        print(f"  [{r.get('id', '?'):>4}] ({r.get('type', '?'):<13}) {r.get('title', '')[:52]:<54} | {channel}")
+
+
 # ---------------------------------------------------------------------------
 # CLI入口
 # ---------------------------------------------------------------------------
@@ -494,6 +533,14 @@ def parse_args():
         "--dry-run", action="store_true",
         help="预览模式：仅显示将要执行的操作，不实际下载"
     )
+    parser.add_argument(
+        "--list", action="store_true",
+        help="仅打印资源清单概览，不执行下载"
+    )
+    parser.add_argument(
+        "--only-ids", nargs="+", default=None,
+        help="只处理指定 ID，例如 --only-ids P01 P13 R05"
+    )
     return parser.parse_args()
 
 
@@ -519,7 +566,15 @@ def main():
         logger.error(f"❌ 读取清单失败: {e}")
         sys.exit(1)
 
+    if args.list:
+        list_catalog(all_records)
+        sys.exit(0)
+
     records = filter_records(all_records, args.type)
+    if args.only_ids:
+        wanted = {i.upper() for i in args.only_ids}
+        records = [r for r in records if r.get("id", "").upper() in wanted]
+        logger.info(f"   指定 ID 过滤后: {len(records)} 条")
     logger.info(f"   筛选后记录数: {len(records)}")
 
     if not records:

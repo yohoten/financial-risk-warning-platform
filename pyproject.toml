@@ -1,0 +1,22 @@
+[project]
+name = "financial-risk-warning-platform"
+version = "1.0.0"
+description = "上市公司财务风险智能预警平台（XGBoost + SHAP + Streamlit）"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+exclude = [".venv", "data", "cache", "reports", "docs/downloads"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
