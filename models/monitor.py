@@ -22,7 +22,7 @@ from config import settings
 from etl.io_utils import get_logger, read_table, resolve
 from etl.stats_utils import psi_table
 from models.data import load_dataset
-from models.metrics import evaluate_model
+from models.metrics import evaluate_model, load_thresholds
 from models.predict import load_model
 
 logger = get_logger("monitor")
@@ -45,13 +45,14 @@ def performance_drift() -> dict:
     """在标注可得的最近年份上重算指标，与训练期指标比较。"""
     ds = load_dataset()
     model = load_model()
+    threshold = float(load_thresholds()["value"])
     result = {"reference": {}, "current": {}}
 
     for label, X, y in (("valid", ds.X_valid, ds.y_valid), ("test", ds.X_test, ds.y_test)):
         if len(X) == 0:
             continue
         prob = model.predict_proba(X)[:, 1]
-        m = evaluate_model(y, prob, name=label)
+        m = evaluate_model(y, prob, threshold=threshold, name=label)
         result["reference" if label == "valid" else "current"] = m
 
     ref_auc = result["reference"].get("auc")
@@ -85,6 +86,7 @@ def build_report(reference_year: int = 2022, current_year: int = settings.TEST_Y
         "n_features": int(len(drift)),
         "n_drifting": int(len(drifting)),
         "n_warning": int(len(warning)),
+        "decision_threshold": float(load_thresholds()["value"]),
         "top_drift": drift.head(10).to_dict("records"),
         "performance": perf,
         "actions": actions,

@@ -96,10 +96,12 @@ with tab1:
 
 with tab2:
     year_b = st.selectbox("导出年度", sorted(scored["year"].unique(), reverse=True), key="batch_year")
-    threshold = st.slider("高风险阈值", 0.3, 0.9, 0.5, 0.05)
+    thresholds = D.load_thresholds()
+    threshold = st.slider("高风险阈值", 0.05, 0.95, float(thresholds["high"]), 0.01,
+                          help=f"默认值来自模型元信息（{thresholds['selected_on']} 冻结）")
     subset = scored[scored["year"] == year_b].sort_values("st_prob", ascending=False).copy()
     subset["risk_level"] = subset["st_prob"].map(
-        lambda p: "高风险" if p >= threshold else ("中风险" if p >= 0.25 else "低风险")
+        lambda p: "高风险" if p >= threshold else ("中风险" if p >= thresholds["medium"] else "低风险")
     )
     export = subset[["stock_code", "company_name", "industry", "year", "st_prob", "risk_level"]].copy()
     export.columns = ["股票代码", "企业简称", "行业", "年度", "ST概率", "风险等级"]

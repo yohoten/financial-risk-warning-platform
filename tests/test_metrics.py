@@ -34,10 +34,11 @@ def test_threshold_within_probability_range():
 
 
 def test_score_to_level_boundaries():
-    assert score_to_level(0.9) == "高风险"
-    assert score_to_level(0.5) == "高风险"
-    assert score_to_level(0.3) == "中风险"
-    assert score_to_level(0.1) == "低风险"
+    thresholds = {"high": 0.5, "medium": 0.25}
+    assert score_to_level(0.9, thresholds) == "高风险"
+    assert score_to_level(0.5, thresholds) == "高风险"
+    assert score_to_level(0.3, thresholds) == "中风险"
+    assert score_to_level(0.1, thresholds) == "低风险"
 
 
 def test_ece_zero_for_calibrated_perfect():

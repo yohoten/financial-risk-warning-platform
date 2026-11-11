@@ -15,7 +15,7 @@ import pandas as pd
 
 from config import settings
 from config.feature_registry import FEATURE_KEYS, ID_COLUMNS, TARGET_COLUMN
-from etl.feature_engineering import build_panel
+from etl.feature_engineering import add_features, build_base_panel
 from etl.feature_selection import select_features
 from etl.io_utils import get_logger, read_table, write_table
 
@@ -48,9 +48,15 @@ def run(refresh: bool = False, companies: int = 240, skip_selection: bool = Fals
     settings.ensure_dirs()
     ensure_raw_data(refresh, companies)
 
-    panel = build_panel()
+    # 清洗层：只含报表科目与外部原始字段
+    base = build_base_panel()
+    write_table(base, settings.CLEANED_PANEL)
+    logger.info("清洗层已写出：%s（%d 行 × %d 列）", settings.rel(settings.CLEANED_PANEL), *base.shape)
+
+    # 特征层：在清洗面板上计算 73 维衍生特征
+    panel = add_features(base)
     write_table(panel, settings.FEATURE_PANEL)
-    write_table(panel, settings.CLEANED_PANEL)
+    logger.info("特征层已写出：%s（%d 行 × %d 列）", settings.rel(settings.FEATURE_PANEL), *panel.shape)
 
     if skip_selection:
         features = [f for f in FEATURE_KEYS if f in panel.columns]

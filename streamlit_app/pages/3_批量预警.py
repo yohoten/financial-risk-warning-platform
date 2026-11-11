@@ -13,7 +13,6 @@ if str(ROOT) not in sys.path:
 import pandas as pd
 import streamlit as st
 
-from config.settings import RISK_THRESHOLDS
 from streamlit_app.components.layout import page_header
 from streamlit_app.utils import charts, data as D
 from streamlit_app.utils.report import batch_excel
@@ -23,14 +22,16 @@ setup_page("批量预警", "📋")
 page_header("批量预警", "支持股票代码批量输入或 CSV 上传，输出风险等级分布与预警清单", "📋")
 
 scored = D.load_predictions()
+thresholds = D.load_thresholds()
 years = sorted(scored["year"].unique(), reverse=True)
 
 with st.sidebar:
     st.markdown("### ⚙️ 评分参数")
     year = st.selectbox("评分年度", years, index=0)
-    high_thr = st.slider("高风险阈值", 0.30, 0.90, float(RISK_THRESHOLDS["high"]), 0.05,
-                         help="ST 概率高于该值判定为高风险")
-    med_thr = st.slider("中风险阈值", 0.05, float(high_thr) - 0.05, float(RISK_THRESHOLDS["medium"]), 0.05,
+    high_thr = st.slider("高风险阈值", 0.05, 0.95, float(thresholds["high"]), 0.01,
+                         help=f"默认值来自模型元信息（{thresholds['selected_on']} 冻结）")
+    med_thr = st.slider("中风险阈值", 0.01, max(0.02, float(high_thr) - 0.01),
+                        min(float(thresholds["medium"]), float(high_thr) - 0.01), 0.01,
                         help="高于该值且低于高风险阈值判定为中风险")
 
 col1, col2 = st.columns(2)

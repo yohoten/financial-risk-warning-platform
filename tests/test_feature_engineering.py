@@ -8,6 +8,18 @@ import pandas as pd
 from config.feature_registry import FEATURE_KEYS, TARGET_COLUMN
 
 
+def test_base_panel_excludes_derived_features(raw_tables):
+    """cleaned 层只保留报表科目，衍生特征必须由 add_features 生成。"""
+    from etl.feature_engineering import build_base_panel
+
+    base = build_base_panel(**raw_tables)
+    assert "is_st" in base.columns
+    assert "total_assets" in base.columns
+    assert "roa" not in base.columns
+    assert "current_ratio" not in base.columns
+    assert "sentiment_polarity" in base.columns  # 外部原始字段允许保留
+
+
 def test_panel_contains_all_features(panel):
     missing = [k for k in FEATURE_KEYS if k not in panel.columns]
     assert not missing, f"特征缺失：{missing}"

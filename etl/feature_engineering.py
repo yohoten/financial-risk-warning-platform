@@ -13,7 +13,7 @@ from config import settings
 from config.feature_registry import FEATURE_KEYS, ID_COLUMNS, TARGET_COLUMN, group_of
 from etl.clean_financial import clean_panel
 from etl.clean_text import clean_sentiment
-from etl.io_utils import get_logger, read_table, write_table
+from etl.io_utils import get_logger, read_table, resolve, write_table
 
 logger = get_logger("features")
 
@@ -173,6 +173,18 @@ def sync_label(features: pd.DataFrame, labels: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def _read_optional(path, required_cols: list[str], table_name: str) -> pd.DataFrame:
+    """可缺省的数据表：缺失时返回空表并告警，对应维度在后续插补中置 0。
+
+    这样做的目的：CSMAR 的文本/诉讼表往往最后才补，
+    缺表时不应阻断财务维度建模，但必须在日志与质量报告中留下痕迹。
+    """
+    if resolve(path) is None:
+        logger.warning("%s 缺失（%s），相关特征将按「无数据」处理", table_name, settings.rel(path))
+        return pd.DataFrame(columns=["stock_code", "year", *required_cols])
+    return read_table(path)
+
+
 def _normalize_keys(df: pd.DataFrame) -> pd.DataFrame:
     """统一主键类型：stock_code 补零为 6 位字符串，year 转整型。
 
@@ -186,7 +198,7 @@ def _normalize_keys(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def build_panel(
+def build_base_panel(
     financial: pd.DataFrame | None = None,
     governance: pd.DataFrame | None = None,
     sentiment: pd.DataFrame | None = None,
@@ -195,15 +207,34 @@ def build_panel(
     labels: pd.DataFrame | None = None,
     macro: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """构建特征面板：清洗 → 衍生 → 宽表合并 → 标签对齐 → 年份筛选。"""
+    """构建清洗层面板：清洗 → 宽表合并 → 标签对齐。
+
+    只保留报表科目与外部原始字段，不含任何衍生特征，对应 data/cleaned 层；
+    衍生特征与建模窗口截取统一由 `add_features` 完成，避免 cleaned 与 feature_store 同构。
+    """
     settings.ensure_dirs()
     financial = financial if financial is not None else read_table(settings.RAW_FINANCIAL)
     governance = governance if governance is not None else read_table(settings.RAW_GOVERNANCE)
-    sentiment = sentiment if sentiment is not None else read_table(settings.RAW_TEXT_SENTIMENT)
-    market = market if market is not None else read_table(settings.RAW_MARKET)
-    legal = legal if legal is not None else read_table(settings.RAW_LEGAL)
-    labels = labels if labels is not None else read_table(settings.RAW_LABELS)
-    macro = macro if macro is not None else read_table(settings.RAW_MACRO)
+    sentiment = sentiment if sentiment is not None else _read_optional(
+        settings.RAW_TEXT_SENTIMENT, ["sentiment_polarity", "mdna_uncertainty"], "年报文本情感")
+    market = market if market is not None else _read_optional(
+        settings.RAW_MARKET, ["audit_opinion"], "市场/审计特征")
+    legal = legal if legal is not None else _read_optional(
+        settings.RAW_LEGAL, ["litigation_count", "penalty_count"], "诉讼/处罚")
+    if labels is None:
+        if resolve(settings.RAW_LABELS) is None:
+            raise FileNotFoundError(
+                "缺少 ST 标签表 data/raw/labels_st.csv（P0 表未下载）。\n"
+                "请先在 CSMAR 下载「特别处理表（ST 事件表）」并按 docs/CSMAR手动下载清单.md 命名，\n"
+                "再执行：python -m etl.csmar_import --step labels --write"
+            )
+        labels = read_table(settings.RAW_LABELS)
+    if macro is None:
+        if resolve(settings.RAW_MACRO) is None:
+            logger.warning("宏观指标缺失（%s），宏观维度将按「无数据」处理", settings.rel(settings.RAW_MACRO))
+            macro = pd.DataFrame(columns=["year", "gdp_growth", "m2_growth"])
+        else:
+            macro = read_table(settings.RAW_MACRO)
 
     financial, governance = _normalize_keys(financial), _normalize_keys(governance)
     sentiment, market = _normalize_keys(sentiment), _normalize_keys(market)
@@ -215,19 +246,29 @@ def build_panel(
         if c not in {"stock_code", "company_name", "industry"} and pd.api.types.is_numeric_dtype(financial[c])
     ]
     financial = clean_panel(financial, numeric_cols)
-    panel = compute_features(financial)
 
-    panel = panel.merge(governance, on=KEY, how="left", suffixes=("", "_gov"))
-    panel = _governance_derived(panel)
+    panel = financial.merge(governance, on=KEY, how="left", suffixes=("", "_gov"))
     panel = panel.merge(clean_sentiment(sentiment), on=KEY, how="left")
     panel = panel.merge(market, on=KEY, how="left", suffixes=("", "_mkt"))
     panel = panel.merge(legal, on=KEY, how="left")
     panel = panel.merge(macro, on="year", how="left")
     panel = sync_label(panel, labels)
 
-    # 只保留建模窗口内的样本，且标签可得
-    keep_years = settings.PANEL_YEARS
-    panel = panel[panel["year"].isin(keep_years)]
+    logger.info(
+        "清洗面板构建完成：%d 行 × %d 列（%d 家公司，%d-%d）",
+        len(panel), panel.shape[1], panel["stock_code"].nunique(),
+        int(panel["year"].min()), int(panel["year"].max()),
+    )
+    return panel.reset_index(drop=True)
+
+
+def add_features(base: pd.DataFrame) -> pd.DataFrame:
+    """在清洗面板上计算 73 维衍生特征，并截取建模窗口，输出特征面板。"""
+    panel = compute_features(base)
+    panel = _governance_derived(panel)
+
+    # 先在有完整历史的面板上算增长率/滚动指标，再截取建模窗口，避免丢失滞后信息
+    panel = panel[panel["year"].isin(settings.PANEL_YEARS)]
     panel = panel[panel[TARGET_COLUMN].notna()].copy()
     panel[TARGET_COLUMN] = panel[TARGET_COLUMN].astype(int)
 
@@ -257,6 +298,20 @@ def build_panel(
     groups = pd.Series(group_of(FEATURE_KEYS)).value_counts().to_dict()
     logger.info("维度分布：%s", groups)
     return panel
+
+
+def build_panel(
+    financial: pd.DataFrame | None = None,
+    governance: pd.DataFrame | None = None,
+    sentiment: pd.DataFrame | None = None,
+    market: pd.DataFrame | None = None,
+    legal: pd.DataFrame | None = None,
+    labels: pd.DataFrame | None = None,
+    macro: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """构建特征面板：清洗层 → 衍生特征（保持旧接口兼容）。"""
+    base = build_base_panel(financial, governance, sentiment, market, legal, labels, macro)
+    return add_features(base)
 
 
 def main() -> None:

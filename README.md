@@ -7,7 +7,7 @@
 [![Streamlit](https://img.shields.io/badge/streamlit-1.29-FF4B4B.svg)](https://streamlit.io/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-2.0-green.svg)](https://xgboost.readthedocs.io/)
 [![SHAP](https://img.shields.io/badge/SHAP-0.45-orange.svg)](https://shap.readthedocs.io/)
-[![Tests](https://img.shields.io/badge/tests-35%20passed-brightgreen.svg)](./tests)
+[![Tests](https://img.shields.io/badge/tests-49%20passed-brightgreen.svg)](./tests)
 
 ---
 
@@ -36,7 +36,7 @@
 | 📋 **批量预警** | 粘贴代码 / 上传 CSV、阈值实时调节、风险等级分布、Excel/CSV 一键导出 |
 | 🔍 **模型解释** | 全局重要性（特征 + 维度双视角）、依赖效应、交互强度、五模型对比、校准曲线、PSI 漂移监控 |
 | 📄 **报告导出** | 单企业 PDF 诊断报告（内置中文字体，无外部依赖）、批量 Excel（含汇总 Sheet）、评估报告、数据字典 |
-| ⚙️ **工程能力** | 一键 Docker 部署、35 项单元测试、四步特征筛选证据链、模型元信息留痕（时间/参数/阈值） |
+| ⚙️ **工程能力** | 一键 Docker 部署、49 项单元测试、四步特征筛选证据链、模型元信息与运行清单留痕（数据/特征 hash、参数、阈值） |
 
 ---
 
@@ -68,15 +68,31 @@ streamlit run streamlit_app/app.py
 ```bash
 make all      # data → pipeline → train → evaluate → shap
 make app      # 启动平台
-make test     # 35 项单元测试
+make test     # 49 项单元测试
 ```
 
-### 方式二：接入真实数据
+### 方式二：接入真实数据（CSMAR 原始分表）
 
-1. 按 [`data/README.md`](./data/README.md) 的字段约定，把 CSMAR/Wind 导出文件放入 `data/raw/`；
-2. 保持 `stock_code` 为 6 位字符串（如 `000001`）、`year` 为整数；
-3. 运行 `python -m etl.run_pipeline`（**不要**加 `--refresh`，避免覆盖真实数据）；
-4. 其余流程完全不变。
+原始导出直接放入 `data/raw/`（命名见 [`docs/CSMAR手动下载清单.md`](./docs/CSMAR手动下载清单.md)），
+由导入层完成「科目代码解码 → 合并报表过滤 → 元转亿元 → 三表合并」：
+
+```bash
+python -m scripts.convert_csmar_xlsx          # 现金流量表 XLSX → 精简 CSV（约 7 分钟）
+python -m etl.csmar_import --step all --write # 解码 + 合并 + 写契约表
+python -m scripts.validate_raw_data           # 质量体检，报告在 reports/data_quality/
+python -m etl.run_pipeline                    # 特征工程 + 四步筛选（需 ST 标签表）
+```
+
+若导出文件已经是合约列名的合并表（而非 CSMAR 原始分表），改用通用映射层：
+
+```bash
+python -m etl.mapping --source D:\csmar\export --dry-run
+python -m etl.mapping --source D:\csmar\export --write
+```
+
+**当前真实数据状态（2026-11-11）**：财务/治理/审计三块已接入（52,203 个公司-年，2013–2025），
+52/73 维特征有真实数值；**缺《特别处理表》→ `is_st` 无法生成 → 训练被阻断**。
+缺口清单、字段级可用性与下载指引见 [`docs/CSMAR数据可行性报告.md`](./docs/CSMAR数据可行性报告.md)。
 
 ### 方式三：Docker 部署（答辩/交付推荐）
 
@@ -186,6 +202,8 @@ financial-risk-warning-platform/
 │   └── config/user_agents.py     #   UA 池与站点限速
 ├── etl/                          # 🔧 数据处理
 │   ├── io_utils.py               #   Parquet/CSV 读写（自动降级）+ 统一日志
+│   ├── mapping.py                #   通用列名映射（已合并表 → 契约）
+│   ├── csmar_import.py           #   CSMAR 原始分表解码：科目代码 → 契约列，三表合并
 │   ├── stats_utils.py            #   IV / PSI / VIF / KS / 分箱
 │   ├── clean_financial.py        #   去重、三级插补、缩尾、样本剔除
 │   ├── clean_text.py             #   情感打分规范化
@@ -208,17 +226,23 @@ financial-risk-warning-platform/
 │   └── utils/                    #   data（缓存取数）/ charts（Plotly）/ report（PDF·Excel）/ styles
 ├── data/                         # 🗄️ 数据（详见 data/README.md）
 │   ├── gen_demo_data.py          #   演示数据生成器（潜在风险因子驱动）
-│   ├── raw/  cleaned/  feature_store/  external/
+│   ├── mapping/csmar.yaml        #   CSMAR 字段映射（别名/单位/编码）
+│   ├── incoming/csmar/           #   下载日志、XLSX 转换产物、字段说明
+│   ├── raw/  cleaned/  feature_store/  external/  demo_raw/
 ├── docs/                         # 📚 文档（见下方"文档索引"）
 │   ├── desgin/                   #   调研报告、实施方案、开题蓝图、架构说明书、运维手册
+│   ├── CSMAR手动下载清单.md       #   表清单、筛选条件、命名规范、验收标准
+│   ├── CSMAR数据可行性报告.md     #   已到数据验证、字段级可用性、缺口与下载指引
 │   ├── 数据字典与特征口径.md      #   由注册表自动生成
-│   ├── 文献与资料调研清单.md      #   36 项资源清单与获取状态
+│   ├── 文献与资料调研清单.md      #   49 项资源清单与获取状态
 │   ├── resources_catalog.csv     #   资源清单（机器可读）
 │   ├── batch_download_resources.py
 │   └── README_资源批量下载工具.md
 ├── notebooks/01_探索性分析.ipynb  # 📈 EDA：样本结构/IV/均值差/基线ROC
 ├── scripts/gen_data_dictionary.py # 🔁 文档自动生成
-├── tests/                        # ✅ 35 项单元测试
+├── scripts/convert_csmar_xlsx.py  # 🔁 现金流量表 XLSX 流式转 CSV
+├── scripts/validate_raw_data.py   # ✅ 原始数据质量校验（结构/主键/标签/覆盖）
+├── tests/                        # ✅ 49 项单元测试
 │   ├── conftest.py               #   内存面板夹具（不写盘、不依赖模型）
 │   ├── test_feature_registry.py  #   特征口径一致性
 │   ├── test_feature_engineering.py
@@ -342,7 +366,7 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | 5. 解释 | `python -m models.shap_analysis` | `shap_values.pkl` |
 | 6. 监控 | `python -m models.monitor` | `monitor_report.json`、`psi_detail.csv` |
 | 7. 平台 | `streamlit run streamlit_app/app.py` | 五大模块可交互 |
-| 8. 测试 | `python -m pytest -q` | 35 passed |
+| 8. 测试 | `python -m pytest -q` | 49 passed |
 
 ---
 
@@ -358,6 +382,8 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | [`docs/desgin/上市公司财务风险智能预警平台_深度调研报告与文献综述.md`](./docs/desgin/上市公司财务风险智能预警平台_深度调研报告与文献综述.md) | 学术文献综述、工程实践调研、可行性论证 |
 | [`docs/desgin/开题报告_文献综述章节写作蓝图.md`](./docs/desgin/开题报告_文献综述章节写作蓝图.md) | 文献综述章节骨架、引用衔接、答辩预判问题 |
 | [`docs/desgin/开题报告_研究内容与技术路线写作蓝图.md`](./docs/desgin/开题报告_研究内容与技术路线写作蓝图.md) | 研究内容、关键问题、技术路线图（Mermaid/draw.io） |
+| [`docs/CSMAR手动下载清单.md`](./docs/CSMAR手动下载清单.md) | 13 张表的下载清单、筛选条件、命名规范、验收标准 |
+| [`docs/CSMAR数据可行性报告.md`](./docs/CSMAR数据可行性报告.md) | 已到数据验证结果、字段级可用性矩阵、缺口与补齐指引 |
 | [`docs/数据字典与特征口径.md`](./docs/数据字典与特征口径.md) | 73 维特征定义、数据表结构、缺失处理规则 |
 | [`docs/文献与资料调研清单.md`](./docs/文献与资料调研清单.md) | 49 项文献/代码/数据资源清单、检索策略、获取状态与缺口 |
 | [`docs/README_资源批量下载工具.md`](./docs/README_资源批量下载工具.md) | 批量下载工具使用说明 |
@@ -396,7 +422,7 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | 模型训练与评估 | ✅ | 五模型对比、Optuna、OOT 评估、分群一致性 |
 | SHAP 可解释性 | ✅ | 四维度分析 + 缓存 + Plotly 可视化 |
 | Streamlit 平台 | ✅ | 五大模块 + 报告导出 |
-| 工程化 | ✅ | 35 项测试、Docker、Makefile、文档自动生成 |
+| 工程化 | ✅ | 49 项测试、Docker、Makefile、文档自动生成 |
 | 待办 | ⬜ | 文本情感增量价值分组检验、在线增量更新、模型注册表（MLflow） |
 
 ---

@@ -22,6 +22,13 @@ GREEN = "#2ca02c"
 ORANGE = "#ff7f0e"
 
 
+def _thresholds() -> dict:
+    """与评估/监控同源的风险分级阈值（缺失元信息时退回 settings 兜底值）。"""
+    from models.metrics import load_thresholds
+
+    return load_thresholds()
+
+
 def _layout(fig: go.Figure, title: str = "", height: int = 360) -> go.Figure:
     fig.update_layout(
         template=PLOT_TEMPLATE,
@@ -39,13 +46,14 @@ def _layout(fig: go.Figure, title: str = "", height: int = 360) -> go.Figure:
 # ---------------------------------------------------------------------------
 def industry_risk_bar(df: pd.DataFrame, top_n: int = 12) -> go.Figure:
     """行业平均风险概率 + 企业数量双轴图。"""
+    th = _thresholds()
     g = df.groupby("industry").agg(avg_prob=("st_prob", "mean"), count=("stock_code", "nunique"),
                                    high=("risk_level", lambda s: (s == "高风险").sum())).reset_index()
     g = g.sort_values("avg_prob", ascending=True).tail(top_n)
 
     fig = go.Figure()
     fig.add_bar(x=g["avg_prob"], y=g["industry"], orientation="h", name="平均风险概率",
-                marker_color=[RED if v >= 0.5 else ORANGE if v >= 0.25 else GREEN for v in g["avg_prob"]],
+                marker_color=[RED if v >= th["high"] else ORANGE if v >= th["medium"] else GREEN for v in g["avg_prob"]],
                 text=[f"{v:.1%}" for v in g["avg_prob"]], textposition="outside")
     fig.add_scatter(x=g["avg_prob"], y=g["industry"], mode="markers", name="高风险企业数",
                     marker=dict(size=np.clip(g["high"] * 3 + 6, 6, 26), color="rgba(31,119,180,.45)",
@@ -171,13 +179,14 @@ def radar(scores: pd.DataFrame, name: str) -> go.Figure:
 
 
 def history_line(history: pd.DataFrame) -> go.Figure:
+    th = _thresholds()
     fig = go.Figure()
     fig.add_scatter(x=history["year"], y=history["st_prob"], mode="lines+markers+text",
                     text=[f"{v:.1%}" for v in history["st_prob"]], textposition="top center",
                     line=dict(color=RED, width=3), marker=dict(size=9),
                     hovertemplate="%{x}年<br>ST概率 %{y:.1%}<extra></extra>")
-    fig.add_hrect(y0=0.5, y1=1, fillcolor=RED, opacity=0.06, line_width=0)
-    fig.add_hrect(y0=0.25, y1=0.5, fillcolor=ORANGE, opacity=0.06, line_width=0)
+    fig.add_hrect(y0=th["high"], y1=1, fillcolor=RED, opacity=0.06, line_width=0)
+    fig.add_hrect(y0=th["medium"], y1=th["high"], fillcolor=ORANGE, opacity=0.06, line_width=0)
     fig.update_yaxes(title="ST 概率", tickformat=".0%", range=[0, max(0.6, history["st_prob"].max() * 1.25)])
     fig.update_xaxes(title="年度", dtick=1)
     return _layout(fig, "历史风险轨迹", 320)

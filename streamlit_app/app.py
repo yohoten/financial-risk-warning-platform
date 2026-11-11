@@ -107,9 +107,11 @@ with right:
 
     if settings.MODEL_META.exists():
         meta = D.load_model_meta()
+        th = meta.get("threshold") or {}
         st.caption(
             f"模型生成于 {meta.get('created_at', '-')}；训练窗口 {meta.get('train_years')}；"
-            f"标签前瞻 {meta.get('label_horizon')} 年；阈值 {meta.get('risk_thresholds')}"
+            f"标签前瞻 {meta.get('label_horizon')} 年；决策阈值 {th.get('value', '-')}"
+            f"（{th.get('selected_on', '-')} 冻结）"
         )
 
     st.subheader("🚀 快速命令")

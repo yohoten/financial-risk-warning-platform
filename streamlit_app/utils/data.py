@@ -68,6 +68,14 @@ def load_model_meta() -> dict:
     return json.loads(settings.MODEL_META.read_text(encoding="utf-8"))
 
 
+@st.cache_data(ttl=300)
+def load_thresholds() -> dict:
+    """风险分级阈值（来自 model_meta.json，与评估/监控同源）。"""
+    from models.metrics import load_thresholds as _load
+
+    return _load()
+
+
 @st.cache_data(ttl=600)
 def load_metrics() -> dict:
     if settings.METRICS_PATH.exists():

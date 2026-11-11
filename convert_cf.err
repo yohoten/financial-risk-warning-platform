@@ -1,0 +1,4 @@
+D:\CodingEmber\financial-risk-warning-platform\.venv\Lib\site-packages\openpyxl\styles\stylesheet.py:226: UserWarning: Workbook contains no default style, apply openpyxl's default
+  warn("Workbook contains no default style, apply openpyxl's default")
+缺少必需列：['Stkcd', 'Accper', 'Typrep', 'DeclareDate', 'ShortName', 'C001000000', 'C002000000', 'C003000000', 'C002006000']
+实际表头前 20 列：('000001', '深发展A', '2010-12-31', 'A', 0.0, None, None, 116507521000.0, None, 2218199000.0, -2344137000.0, None, None, None, None, 21206937000.0, 0.0, -30235571000.0, None, None)

@@ -3,7 +3,7 @@
 
 PY ?= python
 
-.PHONY: help install data pipeline train evaluate shap monitor app test lint docker clean
+.PHONY: help install data pipeline validate train evaluate shap monitor app test lint docker clean
 
 help:  ## 显示所有可用命令
 	@grep -E "^[a-zA-Z_-]+:.*?## .*$$" $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -16,6 +16,9 @@ data:  ## 生成演示原始数据
 
 pipeline:  ## 清洗 + 特征工程 + 四步特征筛选
 	$(PY) -m etl.run_pipeline
+
+validate:  ## 原始数据质量校验（进入 ETL 前）
+	$(PY) -m scripts.validate_raw_data
 
 train:  ## 训练五模型 + Optuna 调优
 	$(PY) -m models.train --trials 30

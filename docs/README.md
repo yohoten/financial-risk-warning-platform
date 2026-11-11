@@ -18,8 +18,11 @@
 
 | 文档 | 内容 |
 |------|------|
+| [CSMAR手动下载清单](./CSMAR手动下载清单.md) | 13 张表的下载优先级、筛选条件、命名规范、验收清单 |
+| [CSMAR数据可行性报告](./CSMAR数据可行性报告.md) | 已到数据验证、字段级可用性矩阵、缺口影响、补齐指引 |
 | [数据字典与特征口径](./数据字典与特征口径.md) | 73 维特征定义、数据表结构、缺失/异常处理规则（由注册表自动生成） |
-| [data/README.md](../data/README.md) | 三层数据目录、字段单位约定、替换真实数据的步骤 |
+| [data/README.md](../data/README.md) | 三层数据目录、字段单位约定、真实数据接入命令 |
+| [data/incoming/csmar/download_log.md](../data/incoming/csmar/download_log.md) | 下载日志（表名/筛选/年份/行数/备注） |
 
 > 修改 `config/feature_registry.py` 后执行 `python -m scripts.gen_data_dictionary` 重新生成本文档。
 

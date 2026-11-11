@@ -13,7 +13,7 @@ import pandas as pd
 from config import settings
 from etl.io_utils import get_logger, write_table
 from models.data import load_dataset
-from models.metrics import calibration_dataframe, evaluate_model, group_metrics
+from models.metrics import calibration_dataframe, evaluate_model, group_metrics, load_thresholds
 from models.predict import load_model
 
 
@@ -46,15 +46,20 @@ def build_report() -> str:
     ds = load_dataset()
     model = load_model()
 
+    # 阈值唯一来源：训练时在验证集冻结的 model_meta.json，测试集不得重选
+    thresholds = load_thresholds()
+    threshold = float(thresholds["value"])
+
     prob_valid = model.predict_proba(ds.X_valid)[:, 1]
-    valid_metrics = evaluate_model(ds.y_valid, prob_valid, name="XGBoost_2023")
+    valid_metrics = evaluate_model(ds.y_valid, prob_valid, threshold=threshold, name="XGBoost_2023")
     test_metrics = None
     if not ds.test.empty:
         prob_test = model.predict_proba(ds.X_test)[:, 1]
-        test_metrics = evaluate_model(ds.y_test, prob_test, name="XGBoost_2024")
+        test_metrics = evaluate_model(ds.y_test, prob_test, threshold=threshold, name="XGBoost_2024")
 
-    sens = threshold_sensitivity(ds.y_valid.to_numpy(), prob_valid)
-    by_industry = group_metrics(ds.valid, prob_valid, "industry")
+    sens_thresholds = tuple(sorted({0.2, 0.3, 0.4, 0.5, round(threshold, 4)}))
+    sens = threshold_sensitivity(ds.y_valid.to_numpy(), prob_valid, thresholds=sens_thresholds)
+    by_industry = group_metrics(ds.valid, prob_valid, "industry", threshold=threshold)
     calib = calibration_dataframe(ds.y_valid, prob_valid)
 
     write_table(sens, settings.ARTIFACT_DIR / "threshold_sensitivity.csv")
@@ -67,6 +72,9 @@ def build_report() -> str:
         f"- 数据集：训练 {len(ds.train)} / 验证 {len(ds.valid)} / 测试 {len(ds.test)}",
         f"- 特征数：{len(ds.features)} 维",
         f"- 标签口径：T 年 ST 状态，特征取自 T-{settings.LABEL_HORIZON} 年（无前视偏差）",
+        f"- 决策阈值：{threshold:.4f}（{thresholds['method']}，在 {thresholds['selected_on']} 冻结；"
+        f"2024 测试集仅应用阈值，不重新选择；风险分级：高≥{thresholds['high']:.4f}、"
+        f"中≥{thresholds['medium']:.4f}）",
         "",
         "## 1. 核心指标（验证集 2023）",
         "",
@@ -89,8 +97,8 @@ def build_report() -> str:
         "",
         f"- 验证集 AUC {valid_metrics['auc']:.4f}、KS {valid_metrics['ks']:.4f}、Brier {valid_metrics['brier']:.4f}，"
         f"{'达到' if valid_metrics['auc'] >= 0.85 else '未达到'}合格线（AUC≥0.85，KS≥0.40，Brier≤0.15）。",
-        f"- 默认阈值 {valid_metrics['threshold']:.3f} 下召回率 {valid_metrics['recall']:.2%}、精确率 {valid_metrics['precision']:.2%}，"
-        "可通过业务阈值滑块在漏报与误报之间取舍。",
+        f"- 冻结阈值 {threshold:.4f} 下召回率 {valid_metrics['recall']:.2%}、精确率 {valid_metrics['precision']:.2%}，"
+        "可通过业务阈值滑块在漏报与误报之间取舍；前端与监控读取同一冻结阈值。",
         "- 分群看板用于检查行业间的性能漂移，若某行业 AUC 显著低于整体，需在论文局限性章节说明。",
     ]
     report = "\n".join(lines)

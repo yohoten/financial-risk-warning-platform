@@ -17,6 +17,9 @@ data/raw/*
 !data/raw/.gitkeep
 data/cleaned/*
 !data/cleaned/.gitkeep
+data/demo_raw/
+data/incoming/csmar/*.csv
+data/incoming/csmar/*.xlsx
 data/feature_store/*
 !data/feature_store/.gitkeep
 data/external/*
@@ -29,6 +32,7 @@ reports/*
 !reports/.gitkeep
 docs/downloads/
 downloads/
+CSMAR_download/
 
 # ---- 日志与临时文件 ----
 *.log

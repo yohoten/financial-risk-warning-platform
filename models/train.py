@@ -33,7 +33,8 @@ from sklearn.preprocessing import StandardScaler
 from config import settings
 from etl.io_utils import get_logger
 from models.data import Dataset, load_dataset
-from models.metrics import evaluate_model
+from models.metrics import best_threshold, evaluate_model
+from models.run_manifest import record_run
 
 logger = get_logger("train")
 
@@ -187,7 +188,11 @@ def train_all(trials: int = 30, use_optuna: bool = True, cv: bool = True) -> dic
         valid_metrics = evaluate_model(ds.y_valid, _proba(model, ds.X_valid), name=name)
         metrics = {**valid_metrics, **cv_result, "split": "valid_2023"}
         if not ds.test.empty:
-            metrics["test_2024"] = evaluate_model(ds.y_test, _proba(model, ds.X_test), name=name)
+            # 阈值在验证集冻结，测试集只应用、不重选，避免测试集信息泄露
+            metrics["test_2024"] = evaluate_model(
+                ds.y_test, _proba(model, ds.X_test),
+                threshold=valid_metrics["threshold"], name=name,
+            )
         results[name] = metrics
         logger.info("%-20s 验证 AUC=%.4f KS=%.4f F1=%.4f Brier=%.4f",
                     name, metrics["auc"], metrics["ks"], metrics["f1"], metrics["brier"])
@@ -209,13 +214,22 @@ def train_all(trials: int = 30, use_optuna: bool = True, cv: bool = True) -> dic
         results["XGBoost(tuned)"] = {**tuned, "split": "valid_2023"}
         if not ds.test.empty:
             results["XGBoost(tuned)"]["test_2024"] = evaluate_model(
-                ds.y_test, _proba(best, ds.X_test), name="XGBoost(tuned)"
+                ds.y_test, _proba(best, ds.X_test),
+                threshold=tuned["threshold"], name="XGBoost(tuned)",
             )
         logger.info("调优后 XGBoost 验证 AUC=%.4f（提升 %.4f）",
                     tuned["auc"], tuned["auc"] - results["XGBoost"]["auc"])
 
     # ---- 落盘 ----
     final_model = models["XGBoost"]
+
+    # 业务阈值：在 2023 验证集上冻结（Youden），中风险为预警阈值 × RISK_MEDIUM_RATIO
+    frozen_threshold = round(best_threshold(ds.y_valid, _proba(final_model, ds.X_valid), method="youden"), 4)
+    risk_thresholds = {
+        "high": frozen_threshold,
+        "medium": round(frozen_threshold * settings.RISK_MEDIUM_RATIO, 4),
+    }
+
     final_model.save_model(str(settings.MODEL_PATH))
     joblib.dump(models, settings.MODEL_ALL_PATH)
     joblib.dump(ds.features, settings.ARTIFACT_DIR / "feature_names.pkl")
@@ -235,10 +249,39 @@ def train_all(trials: int = 30, use_optuna: bool = True, cv: bool = True) -> dic
             "test": int(len(ds.test)), "positive_rate": round(float(ds.y_train.mean()), 4),
         },
         "tuning": tuning,
-        "risk_thresholds": settings.RISK_THRESHOLDS,
+        "risk_thresholds": risk_thresholds,
+        "threshold": {
+            "value": frozen_threshold,
+            "high": risk_thresholds["high"],
+            "medium": risk_thresholds["medium"],
+            "method": "youden",
+            "selected_on": f"valid_{settings.VALID_YEAR}",
+            "medium_ratio": settings.RISK_MEDIUM_RATIO,
+            "note": "验证集冻结；测试集仅应用阈值，不重新选择",
+        },
     }
     settings.MODEL_META.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
     settings.METRICS_PATH.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    record_run(
+        run_type="train",
+        params={
+            "trials": trials,
+            "use_optuna": use_optuna,
+            "cv": cv,
+            "tuning_best_params": tuning.get("params", {}),
+            "random_seed": settings.RANDOM_SEED,
+            "train_years": list(settings.TRAIN_YEAR_RANGE),
+        },
+        metrics={
+            "XGBoost": results.get("XGBoost"),
+            "XGBoost(tuned)": results.get("XGBoost(tuned)"),
+        },
+        threshold=risk_thresholds,
+        dataset=meta["dataset"],
+        features=ds.features,
+        extra={"model_path": settings.rel(settings.MODEL_PATH)},
+    )
 
     logger.info("模型已保存：%s", settings.rel(settings.MODEL_PATH))
     logger.info("指标已保存：%s", settings.rel(settings.METRICS_PATH))

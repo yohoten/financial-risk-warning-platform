@@ -1,0 +1,322 @@
+# CSMAR → 项目 raw 契约字段映射
+#
+# 使用方式：
+#   python -m etl.mapping --list
+#   python -m etl.mapping --source D:\csmar\export --table financial --dry-run
+#   python -m etl.mapping --source D:\csmar\export --table financial --write
+#   python -m scripts.validate_raw_data
+#
+# 约定：
+# 1. columns 的键是项目内部 raw 契约列名（见 data/README.md），值为源列别名候选；
+# 2. 匹配时忽略空格、全角/半角差异与英文大小写，按 aliases 顺序取第一个命中列；
+# 3. scale 为单位换算系数：CSMAR 金额常以“元”导出，项目口径为“亿元”，故取 1e-8；
+# 4. 未在映射中声明的源列会被忽略并在导入报告中列出；
+# 5. 若 CSMAR 把期间费用拆成销售/管理/财务费用，请先在导出层求和为 opex 再导入。
+
+version: 1
+source: CSMAR
+updated: "2026-11-08"
+
+tables:
+  financial:
+    target: data/raw/csmar_financial.csv
+    files: ["*财务*.xlsx", "*财务*.csv", "*financial*.csv", "csmar_financial.csv"]
+    key: [stock_code, year]
+    required: [stock_code, year, total_assets, total_liabilities, equity, revenue, net_profit, ocf]
+    columns:
+      stock_code:
+        aliases: [证券代码, 股票代码, Stkcd, Symbol]
+        dtype: str
+        transform: stock_code
+      company_name:
+        aliases: [证券简称, 公司简称, 股票简称, ShortName]
+        dtype: str
+      industry:
+        aliases: [行业代码, 证监会行业代码, 所属行业, IndustryCode]
+        dtype: str
+      year:
+        aliases: [会计年度, 报表年度, 年度, Accper, Year]
+        dtype: int
+        transform: year
+      revenue:
+        aliases: [营业收入, 营业总收入, 主营业务收入, TotalRevenue, OperatingRevenue]
+        dtype: float
+        scale: 1.0e-8
+      cost:
+        aliases: [营业成本, 主营业务成本, OperatingCost]
+        dtype: float
+        scale: 1.0e-8
+      opex:
+        aliases: [期间费用, 营业费用合计, 三费合计, OperatingExpense]
+        dtype: float
+        scale: 1.0e-8
+      ebit:
+        aliases: [息税前利润, 利润总额, EBIT, EBT]
+        dtype: float
+        scale: 1.0e-8
+      net_profit:
+        aliases: [净利润, 归属于母公司所有者的净利润, NetProfit]
+        dtype: float
+        scale: 1.0e-8
+      deducted_profit:
+        aliases: [扣除非经常性损益后的净利润, 扣非净利润, DeductedProfit]
+        dtype: float
+        scale: 1.0e-8
+      ocf:
+        aliases: [经营活动产生的现金流量净额, 经营现金流量净额, OCF]
+        dtype: float
+        scale: 1.0e-8
+      icf:
+        aliases: [投资活动产生的现金流量净额, 投资现金流量净额, ICF]
+        dtype: float
+        scale: 1.0e-8
+      fcf_financing:
+        aliases: [筹资活动产生的现金流量净额, 筹资现金流量净额, FinancingCashFlow]
+        dtype: float
+        scale: 1.0e-8
+      capex:
+        aliases: [购建固定资产、无形资产和其他长期资产支付的现金, 资本性支出, CapEx]
+        dtype: float
+        scale: 1.0e-8
+      total_assets:
+        aliases: [资产总计, 总资产, TotalAssets]
+        dtype: float
+        scale: 1.0e-8
+      total_liabilities:
+        aliases: [负债合计, 总负债, TotalLiabilities]
+        dtype: float
+        scale: 1.0e-8
+      equity:
+        aliases: [所有者权益合计, 股东权益合计, 净资产, TotalEquity]
+        dtype: float
+        scale: 1.0e-8
+      current_assets:
+        aliases: [流动资产合计, CurrentAssets]
+        dtype: float
+        scale: 1.0e-8
+      current_lia:
+        aliases: [流动负债合计, CurrentLiabilities]
+        dtype: float
+        scale: 1.0e-8
+      inventory:
+        aliases: [存货, Inventory]
+        dtype: float
+        scale: 1.0e-8
+      cash:
+        aliases: [货币资金, 现金及现金等价物, Cash]
+        dtype: float
+        scale: 1.0e-8
+      receivables:
+        aliases: [应收账款, 应收账款净额, AccountsReceivable]
+        dtype: float
+        scale: 1.0e-8
+      payable:
+        aliases: [应付账款, AccountsPayable]
+        dtype: float
+        scale: 1.0e-8
+      fixed_assets:
+        aliases: [固定资产, 固定资产净额, FixedAssets]
+        dtype: float
+        scale: 1.0e-8
+      short_borrow:
+        aliases: [短期借款, ShortTermBorrowing]
+        dtype: float
+        scale: 1.0e-8
+      lt_debt:
+        aliases: [长期借款, LongTermBorrowing]
+        dtype: float
+        scale: 1.0e-8
+      interest_debt:
+        aliases: [有息负债, 有息债务, InterestBearingDebt]
+        dtype: float
+        scale: 1.0e-8
+      interest_expense:
+        aliases: [利息费用, 利息支出, InterestExpense]
+        dtype: float
+        scale: 1.0e-8
+      total_shares:
+        aliases: [总股本, 实收资本, TotalShares]
+        dtype: float
+        scale: 1.0e-8
+      rd_expense:
+        aliases: [研发费用, 研发支出, R&DExpense]
+        dtype: float
+        scale: 1.0e-8
+      depreciation:
+        aliases: [折旧与摊销, 固定资产折旧, Depreciation]
+        dtype: float
+        scale: 1.0e-8
+      audit_fee:
+        aliases: [审计费用, 审计费, AuditFee]
+        dtype: float
+        scale: 1.0e-8
+
+  governance:
+    target: data/raw/csmar_governance.csv
+    files: ["*治理*.xlsx", "*治理*.csv", "*governance*.csv", "csmar_governance.csv"]
+    key: [stock_code, year]
+    required: [stock_code, year, top1_holding, board_size, independent_directors]
+    columns:
+      stock_code:
+        aliases: [证券代码, 股票代码, Stkcd, Symbol]
+        dtype: str
+        transform: stock_code
+      year:
+        aliases: [会计年度, 年度, Accper, Year]
+        dtype: int
+        transform: year
+      top1_holding:
+        aliases: [第一大股东持股比例, 控股股东持股比例, Top1Holding]
+        dtype: float
+        scale: 0.01
+      top2_5_holding:
+        aliases: [第二至五大股东持股比例合计, 前五大股东持股比例, Top2to5Holding]
+        dtype: float
+        scale: 0.01
+      board_size:
+        aliases: [董事会人数, 董事会规模, BoardSize]
+        dtype: int
+      independent_directors:
+        aliases: [独立董事人数, IndependentDirectors]
+        dtype: int
+      management_holding:
+        aliases: [管理层持股比例, 高管持股比例, ManagementHolding]
+        dtype: float
+        scale: 0.01
+      duality:
+        aliases: [两职合一, 董事长兼任总经理, Duality]
+        dtype: int
+      big4_audit:
+        aliases: [是否四大审计, 四大审计, Big4Audit]
+        dtype: int
+      institutional_holding:
+        aliases: [机构投资者持股比例, 机构持股比例, InstitutionalHolding]
+        dtype: float
+        scale: 0.01
+
+  text_sentiment:
+    target: data/raw/text_sentiment.csv
+    files: ["*情感*.xlsx", "*情感*.csv", "*sentiment*.csv", "text_sentiment.csv"]
+    key: [stock_code, year]
+    required: [stock_code, year, sentiment_polarity, mdna_uncertainty]
+    columns:
+      stock_code:
+        aliases: [证券代码, 股票代码, Stkcd, Symbol]
+        dtype: str
+        transform: stock_code
+      year:
+        aliases: [会计年度, 年度, Accper, Year]
+        dtype: int
+        transform: year
+      mdna_positive:
+        aliases: [MD&A正面得分, 管理层讨论正面情感, MdnaPositive]
+        dtype: float
+      mdna_negative:
+        aliases: [MD&A负面得分, 管理层讨论负面情感, MdnaNegative]
+        dtype: float
+      mdna_uncertainty:
+        aliases: [MD&A不确定性, 不确定性得分, MdnaUncertainty]
+        dtype: float
+      sentiment_polarity:
+        aliases: [情感极性, 情感倾向, SentimentPolarity]
+        dtype: float
+      sentiment_volatility:
+        aliases: [情感波动率, 情感方差, SentimentVolatility]
+        dtype: float
+      forward_looking_ratio:
+        aliases: [前瞻性词频, 前瞻性表述占比, ForwardLookingRatio]
+        dtype: float
+
+  market_features:
+    target: data/raw/market_features.csv
+    files: ["*市场*.xlsx", "*市场*.csv", "*market*.csv", "market_features.csv"]
+    key: [stock_code, year]
+    required: [stock_code, year, audit_opinion]
+    columns:
+      stock_code:
+        aliases: [证券代码, 股票代码, Stkcd, Symbol]
+        dtype: str
+        transform: stock_code
+      year:
+        aliases: [会计年度, 年度, Accper, Year]
+        dtype: int
+        transform: year
+      audit_opinion:
+        aliases: [审计意见类型, 审计意见, AuditOpinion]
+        dtype: int
+        transform: audit_opinion_flag
+      annual_turnover:
+        aliases: [年换手率, 换手率, AnnualTurnover]
+        dtype: float
+      stock_volatility:
+        aliases: [股价年化波动率, 年化波动率, StockVolatility]
+        dtype: float
+
+  legal_events:
+    target: data/raw/legal_events.csv
+    files: ["*司法*.xlsx", "*司法*.csv", "*legal*.csv", "legal_events.csv"]
+    key: [stock_code, year]
+    required: [stock_code, year, litigation_count]
+    columns:
+      stock_code:
+        aliases: [证券代码, 股票代码, Stkcd, Symbol]
+        dtype: str
+        transform: stock_code
+      year:
+        aliases: [会计年度, 年度, Accper, Year]
+        dtype: int
+        transform: year
+      litigation_count:
+        aliases: [涉诉次数, 诉讼次数, LitigationCount]
+        dtype: int
+      penalty_count:
+        aliases: [处罚次数, 违规处罚次数, PenaltyCount]
+        dtype: int
+
+  labels_st:
+    target: data/raw/labels_st.csv
+    files: ["*ST*.xlsx", "*ST*.csv", "*label*.csv", "labels_st.csv"]
+    key: [stock_code, year]
+    required: [stock_code, year, is_st]
+    columns:
+      stock_code:
+        aliases: [证券代码, 股票代码, Stkcd, Symbol]
+        dtype: str
+        transform: stock_code
+      year:
+        aliases: [会计年度, 年度, Accper, Year]
+        dtype: int
+        transform: year
+      is_st:
+        aliases: [是否ST, ST状态, 是否被ST, IsST]
+        dtype: int
+        transform: st_flag
+
+  macro_industry:
+    target: data/external/macro_industry.csv
+    files: ["*宏观*.xlsx", "*宏观*.csv", "*macro*.csv", "macro_industry.csv"]
+    key: [year]
+    required: [year, gdp_growth, m2_growth]
+    columns:
+      year:
+        aliases: [年度, 年份, 会计年度, Year]
+        dtype: int
+        transform: year
+      gdp_growth:
+        aliases: [GDP增速, GDP增长率, GDPGrowth]
+        dtype: float
+      m2_growth:
+        aliases: [M2增速, M2增长率, M2Growth]
+        dtype: float
+      cpi_yoy:
+        aliases: [CPI同比, CPI同比增速, CPIYoy]
+        dtype: float
+      ppi_yoy:
+        aliases: [PPI同比, PPI同比增速, PPIYoy]
+        dtype: float
+      social_financing_growth:
+        aliases: [社融增速, 社会融资规模增速, SocialFinancingGrowth]
+        dtype: float
+      pmi_manufacturing:
+        aliases: [制造业PMI, PMI, ManufacturingPMI]
+        dtype: float
