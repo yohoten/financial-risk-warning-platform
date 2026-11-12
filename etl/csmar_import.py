@@ -32,6 +32,14 @@ logger = get_logger("csmar-import")
 YEAR_MIN, YEAR_MAX = 2013, 2026
 EXCLUDE_PREFIX = ("J", "K", "S")
 KEY = ["stock_code", "year"]
+
+# 沪深 A 股代码前缀；排除 B 股（200/900）与北交所（4/8/920）。
+# 财务主表当前混有这些代码，标签阶段在这里统一收口，避免 B 股重复样本被误标为 0。
+A_SHARE_PREFIXES = {
+    "000", "001", "002", "003",
+    "300", "301",
+    "600", "601", "603", "605", "688", "689",
+}
 DEMO_BACKUP = settings.DATA_DIR / "demo_raw"
 
 BALANCE_CODES = {
@@ -400,30 +408,73 @@ def build_market(write: bool = False) -> pd.DataFrame:
     return out
 
 
+def _event_year(series: pd.Series) -> pd.Series:
+    """从 `2019-04-30` / `2019/04/30` / `2019年` 中提取年份。"""
+    return pd.to_numeric(series.astype(str).str.extract(r"(\d{4})", expand=False), errors="coerce")
+
+
 def build_labels(write: bool = False) -> pd.DataFrame | None:
-    """ST 事件表 → 公司-年标签；缺表时返回 None（阻断建模）。"""
+    """ST 事件表 → 完整 0/1 公司-年标签；缺表时返回 None（阻断建模）。
+
+    关键口径：
+    - 标签全集取财务主表的公司-年，未命中任何 ST 事件的公司-年显式记为 0；
+      不能只输出正样本，否则 `add_features` 的 `notna()` 会把负样本全部丢掉。
+    - 事件区间为 [实施日期所在年, 撤销日期所在年]；撤销日期缺失视为仍在 ST，
+      一直标记到 YEAR_MAX。这样既保留 ST 期间，也不会在撤销后继续误标。
+    """
     path = settings.RAW_DIR / "ST_events.csv"
     if not path.exists():
         logger.warning("缺少 ST_events.csv（P0 表），无法生成 is_st 标签——建模被阻断")
         return None
     df = pd.read_csv(path, dtype=str, encoding="utf-8-sig")
-    cols = {c.lower(): c for c in df.columns}
-    code_col = next((cols[k] for k in cols if "code" in k or "代码" in k), df.columns[0])
-    date_col = next((cols[k] for k in cols if "date" in k or "日期" in k), df.columns[1])
+    cols = {str(c).lower(): c for c in df.columns}
+    code_col = next((c for k, c in cols.items() if "code" in k or "代码" in k), None)
+    start_col = next((c for k, c in cols.items() if "实施" in k or "start" in k), None)
+    if start_col is None:
+        start_col = next((c for k, c in cols.items() if "date" in k or "日期" in k), None)
+    end_col = next((c for k, c in cols.items() if "撤销" in k or "取消" in k or "end" in k), None)
+    if code_col is None or start_col is None:
+        raise ValueError("ST_events.csv 至少需要「证券代码」和「实施日期」两列")
+
     df["stock_code"] = df[code_col].astype(str).str.extract(r"(\d{1,6})", expand=False).str.zfill(6)
-    df["event_year"] = pd.to_numeric(df[date_col].astype(str).str[:4], errors="coerce")
-    df = df.dropna(subset=["event_year"])
-    # 事件表 → 年度状态：首次实施年份起标记为 ST（撤销年之后恢复）
-    years = range(YEAR_MIN, YEAR_MAX + 1)
-    rows = []
-    for code, part in df.groupby("stock_code"):
-        start = int(part["event_year"].min())
-        for y in years:
-            if y >= start:
-                rows.append({"stock_code": code, "year": y, "is_st": 1})
-    out = pd.DataFrame(rows)
-    out = out.drop_duplicates(KEY)
-    logger.info("ST 标签：%d 行，正样本 %d 个公司-年", len(out), int(out["is_st"].sum()))
+    df["start_year"] = _event_year(df[start_col])
+    df["end_year"] = _event_year(df[end_col]) if end_col else YEAR_MAX
+    df["end_year"] = df["end_year"].fillna(YEAR_MAX).clip(upper=YEAR_MAX)
+    df = df.dropna(subset=["start_year"]).copy()
+    df["start_year"] = df["start_year"].astype(int)
+    df["end_year"] = df["end_year"].astype(int)
+
+    # 标签全集：财务主表出现过的公司-年；缺失财务表时退化为事件表覆盖的年份
+    if settings.RAW_FINANCIAL.exists():
+        fin = pd.read_csv(settings.RAW_FINANCIAL, dtype={"stock_code": str},
+                          usecols=["stock_code", "year"])
+        keys = fin.drop_duplicates().copy()
+        keys["stock_code"] = keys["stock_code"].astype(str).str.zfill(6)
+        keys["year"] = pd.to_numeric(keys["year"], errors="coerce")
+        keys = keys.dropna(subset=["year"])
+        keys["year"] = keys["year"].astype(int)
+        keys = keys[keys["stock_code"].str[:3].isin(A_SHARE_PREFIXES)]
+        keys = keys[keys["year"].between(YEAR_MIN, YEAR_MAX)]
+    else:
+        keys = pd.DataFrame(
+            [(code, y) for code in df["stock_code"].unique()
+             for y in range(YEAR_MIN, YEAR_MAX + 1)],
+            columns=KEY,
+        )
+
+    positive: set[tuple[str, int]] = set()
+    for code, start, end in df[["stock_code", "start_year", "end_year"]].itertuples(index=False, name=None):
+        for year in range(max(int(start), YEAR_MIN), min(int(end), YEAR_MAX) + 1):
+            positive.add((str(code), year))
+
+    out = keys.drop_duplicates(KEY).reset_index(drop=True)
+    out["is_st"] = [1 if (c, y) in positive else 0 for c, y in zip(out["stock_code"], out["year"])]
+    out["label_source"] = (df["数据来源"].dropna().iloc[0]
+                           if "数据来源" in df.columns and df["数据来源"].notna().any()
+                           else "ST_events.csv")
+    logger.info("ST 标签：%d 个公司-年，正样本 %d（%.2f%%），覆盖 %d-%d",
+                len(out), int(out["is_st"].sum()), out["is_st"].mean() * 100,
+                int(out["year"].min()), int(out["year"].max()))
     if write:
         _safe_write(out, settings.RAW_LABELS)
     return out

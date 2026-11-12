@@ -42,6 +42,8 @@ MISSING_RATE_WARN = 0.30
 IDENTITY_TOL = 0.01
 MODELING_YEARS = list(range(settings.TRAIN_YEAR_RANGE[0], settings.TEST_YEAR + 1))
 TARGET_LEVELS = {"error", "warning", "info"}
+# 与 etl/csmar_import.py 的标签样本口径保持一致：只保留沪深 A 股
+A_SHARE_PREFIXES = ("000", "001", "002", "003", "300", "301", "600", "601", "603", "605", "688")
 
 
 @dataclass(frozen=True)
@@ -306,14 +308,40 @@ def cross_table_checks(frames: dict[str, pd.DataFrame]) -> tuple[list[dict], dic
 
     labels = frames.get("labels_st")
     if labels is not None and not labels.empty:
-        modeling = labels[pd.to_numeric(labels["year"], errors="coerce").isin(MODELING_YEARS)]
-        keys = _keys(modeling, ("stock_code", "year"))
-        if fin_modeling_keys:
-            ratio = len(fin_modeling_keys & keys) / len(fin_modeling_keys)
+        # 标签按 T-2 对齐：特征年 y 需要 y+LABEL_HORIZON 年的 ST 状态
+        label_years = {y + settings.LABEL_HORIZON for y in MODELING_YEARS}
+        modeling = labels[pd.to_numeric(labels["year"], errors="coerce").isin(label_years)]
+        label_keys = _keys(modeling, ("stock_code", "year"))
+        # 财务表含 B 股/北交所；标签已按 A 股过滤，覆盖检查也只看 A 股
+        fin_a_keys = {
+            k for k in fin_modeling_keys
+            if str(k[0]).strip().zfill(6)[:3] in A_SHARE_PREFIXES
+        }
+        if fin_a_keys:
+            def _shifted(key: tuple) -> tuple | None:
+                code, year = key
+                try:
+                    return code, str(int(float(year)) + settings.LABEL_HORIZON)
+                except (TypeError, ValueError):
+                    return None
+
+            covered = {k for k in fin_a_keys if _shifted(k) in label_keys}
+            ratio = len(covered) / len(fin_a_keys)
             coverage["labels_st@modeling_window"] = round(ratio, 4)
             if ratio < 0.95:
+                missing_keys = fin_a_keys - covered
+                year_counts: dict[int, int] = {}
+                for _, year in missing_keys:
+                    if str(year).strip().isdigit():
+                        y = int(year)
+                        year_counts[y] = year_counts.get(y, 0) + 1
+                top_years = sorted(year_counts.items(), key=lambda item: -item[1])[:3]
+                hint = ("；缺口最多的特征年："
+                        + "、".join(f"{y}({n})" for y, n in top_years)
+                        + "（这些年的 T+2 标签缺失；2024 特征年需要 2026 年 ST 事件）"
+                        if top_years else "")
                 issues.append(_issue("error", "labels_st", "label_coverage",
-                                     f"建模窗口内仅 {ratio:.1%} 的公司-年有 ST 标签"))
+                                     f"按 T+{settings.LABEL_HORIZON} 对齐，建模窗口内仅 {ratio:.1%} 的公司-年有 ST 标签{hint}"))
 
     return issues, coverage
 

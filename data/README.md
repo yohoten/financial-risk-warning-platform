@@ -16,7 +16,8 @@ data/
 │   ├── csmar_financial.csv      ← 由三分表合并（契约表，单位已换算为亿元）
 │   ├── csmar_governance.csv     ← 十大股东 + 高管表 + 四大审计
 │   ├── market_features.csv      ← 审计意见 + 审计费用（交易字段待补）
-│   ├── labels_st.csv            ← ST 事件表（**当前缺失，阻断建模**）
+│   ├── ST_events.csv            ← ST 事件表（当前为基本信息简称代理，官方表待补）
+│   ├── labels_st.csv            ← 完整 0/1 ST 标签（48,290 个 A 股公司-年，2013–2025）
 │   ├── text_sentiment.csv       年报 MD&A 情感（待补）
 │   ├── legal_events.csv         诉讼/处罚（待补）
 │   └── annual_reports/          年报 PDF + mdna_text/ 抽取文本
@@ -47,9 +48,10 @@ python -m scripts.convert_csmar_xlsx
 python -m etl.csmar_import --step all --write
 # 4. 质量体检
 python -m scripts.validate_raw_data      # 报告：reports/data_quality/
-# 5. 补齐 ST 表后：生成标签 → 跑流水线
+# 5. 当前用基本信息简称生成代理 ST 标签（官方表到位后改为官方 ST_events.csv）
+python -m scripts.build_st_labels_proxy --write
 python -m etl.csmar_import --step labels --write
-python -m etl.run_pipeline
+python -m etl.run_pipeline                  # 特征 2015–2023；2024 测试需 2026 标签
 ```
 
 当前进度与缺口见 [`docs/CSMAR数据可行性报告.md`](../docs/CSMAR数据可行性报告.md)。

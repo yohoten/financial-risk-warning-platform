@@ -1,0 +1,227 @@
+{
+  "generated_at": "2026-11-11 22:11:25",
+  "raw_dir": "data\\raw",
+  "external_dir": "data\\external",
+  "summary": {
+    "tables": 7,
+    "rows": 205613,
+    "errors": 1,
+    "warnings": 5
+  },
+  "tables": [
+    {
+      "name": "financial",
+      "path": "data\\raw\\csmar_financial.csv",
+      "exists": true,
+      "rows": 52203,
+      "columns": 40,
+      "issues": [
+        {
+          "level": "warning",
+          "table": "financial",
+          "check": "missing_rate",
+          "message": "6 列缺失率超过 30%，最高 100.0%",
+          "detail": {
+            "deducted_profit": 1.0,
+            "depreciation": 1.0,
+            "bonds_payable": 0.7322,
+            "lt_debt": 0.403,
+            "rd_expense": 0.3225
+          }
+        },
+        {
+          "level": "warning",
+          "table": "financial",
+          "check": "accounting_identity",
+          "message": "9/51003 行不满足 资产=负债+权益（容差 1%）",
+          "detail": null
+        },
+        {
+          "level": "warning",
+          "table": "financial",
+          "check": "liabilities_over_assets",
+          "message": "242 行负债超过总资产 105%（资不抵债口径需确认）",
+          "detail": null
+        }
+      ],
+      "errors": 0,
+      "warnings": 3,
+      "year_min": 2013,
+      "year_max": 2025
+    },
+    {
+      "name": "governance",
+      "path": "data\\raw\\csmar_governance.csv",
+      "exists": true,
+      "rows": 52560,
+      "columns": 10,
+      "issues": [
+        {
+          "level": "warning",
+          "table": "governance",
+          "check": "missing_rate",
+          "message": "1 列缺失率超过 30%，最高 100.0%",
+          "detail": {
+            "duality": 1.0
+          }
+        }
+      ],
+      "errors": 0,
+      "warnings": 1,
+      "year_min": 2013,
+      "year_max": 2025
+    },
+    {
+      "name": "text_sentiment",
+      "path": "data\\raw\\text_sentiment.csv",
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "issues": [
+        {
+          "level": "error",
+          "table": "text_sentiment",
+          "check": "file_missing",
+          "message": "文件不存在：data\\raw\\text_sentiment.csv",
+          "detail": null
+        }
+      ]
+    },
+    {
+      "name": "market_features",
+      "path": "data\\raw\\market_features.csv",
+      "exists": true,
+      "rows": 52560,
+      "columns": 7,
+      "issues": [
+        {
+          "level": "warning",
+          "table": "market_features",
+          "check": "missing_rate",
+          "message": "2 列缺失率超过 30%，最高 100.0%",
+          "detail": {
+            "annual_turnover": 1.0,
+            "stock_volatility": 1.0
+          }
+        }
+      ],
+      "errors": 0,
+      "warnings": 1,
+      "year_min": 2013,
+      "year_max": 2025
+    },
+    {
+      "name": "legal_events",
+      "path": "data\\raw\\legal_events.csv",
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "issues": [
+        {
+          "level": "error",
+          "table": "legal_events",
+          "check": "file_missing",
+          "message": "文件不存在：data\\raw\\legal_events.csv",
+          "detail": null
+        }
+      ]
+    },
+    {
+      "name": "labels_st",
+      "path": "data\\raw\\labels_st.csv",
+      "exists": true,
+      "rows": 48290,
+      "columns": 4,
+      "issues": [
+        {
+          "level": "error",
+          "table": "labels_st",
+          "check": "label_coverage",
+          "message": "按 T+2 对齐，建模窗口内仅 86.1% 的公司-年有 ST 标签；缺口最多的特征年：2024(4914)、2022(83)、2021(76)（这些年的 T+2 标签缺失；2024 特征年需要 2026 年 ST 事件）",
+          "detail": null
+        }
+      ],
+      "errors": 1,
+      "warnings": 0,
+      "year_min": 2013,
+      "year_max": 2025
+    },
+    {
+      "name": "macro_industry",
+      "path": "data\\external\\macro_industry.csv",
+      "exists": false,
+      "rows": 0,
+      "columns": 0,
+      "issues": [
+        {
+          "level": "error",
+          "table": "macro_industry",
+          "check": "file_missing",
+          "message": "文件不存在：data\\external\\macro_industry.csv",
+          "detail": null
+        }
+      ]
+    }
+  ],
+  "coverage": {
+    "governance": 0.9486,
+    "market_features": 0.9486,
+    "labels_st": 0.9223,
+    "labels_st@modeling_window": 0.8606
+  },
+  "year_coverage": {
+    "2013": {
+      "rows": 2434,
+      "st_rate": 0.0203
+    },
+    "2014": {
+      "rows": 2597,
+      "st_rate": 0.0185
+    },
+    "2015": {
+      "rows": 2883,
+      "st_rate": 0.0191
+    },
+    "2016": {
+      "rows": 3212,
+      "st_rate": 0.0203
+    },
+    "2017": {
+      "rows": 3592,
+      "st_rate": 0.0217
+    },
+    "2018": {
+      "rows": 3683,
+      "st_rate": 0.0257
+    },
+    "2019": {
+      "rows": 3877,
+      "st_rate": 0.0364
+    },
+    "2020": {
+      "rows": 4327,
+      "st_rate": 0.0501
+    },
+    "2021": {
+      "rows": 4754,
+      "st_rate": 0.0358
+    },
+    "2022": {
+      "rows": 5026,
+      "st_rate": 0.0251
+    },
+    "2023": {
+      "rows": 5199,
+      "st_rate": 0.0206
+    },
+    "2024": {
+      "rows": 5262,
+      "st_rate": 0.025
+    },
+    "2025": {
+      "rows": 5357,
+      "st_rate": 0.0334
+    }
+  },
+  "mapping": null
+}
