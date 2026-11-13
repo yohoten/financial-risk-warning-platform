@@ -24,14 +24,16 @@ data/feature_store/*
 !data/feature_store/.gitkeep
 data/external/*
 !data/external/.gitkeep
+
 models/artifacts/*
 !models/artifacts/.gitkeep
 cache/*
 !cache/.gitkeep
+
 reports/*
 !reports/.gitkeep
+
 docs/downloads/repos/
-downloads/
 CSMAR_download/
 
 # ---- 日志与临时文件 ----

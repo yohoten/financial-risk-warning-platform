@@ -1,0 +1,936 @@
+2026-11-08 13:55:34,600 [INFO] 🚀 财务风险预警研究资源批量下载工具 v1.0
+2026-11-08 13:55:34,631 [INFO]    清单文件: resources_catalog.csv
+2026-11-08 13:55:34,632 [INFO]    资源类型: all
+2026-11-08 13:55:34,632 [INFO]    输出目录: ./downloads
+2026-11-08 13:55:34,632 [INFO]    预览模式: 否
+2026-11-08 13:55:34,632 [INFO]    清单记录数: 49
+2026-11-08 13:55:35,254 [INFO] 🚀 财务风险预警研究资源批量下载工具 v1.0
+2026-11-08 13:55:35,256 [INFO]    清单文件: resources_catalog.csv
+2026-11-08 13:55:35,256 [INFO]    资源类型: all
+2026-11-08 13:55:35,256 [INFO]    输出目录: ./downloads
+2026-11-08 13:55:35,256 [INFO]    预览模式: 是
+2026-11-08 13:55:35,258 [INFO]    清单记录数: 49
+2026-11-08 13:55:35,259 [INFO]    筛选后记录数: 49
+2026-11-08 13:55:35,259 [INFO] 
+============================================================
+2026-11-08 13:55:35,259 [INFO] [1/49] P01: Financial Ratios, Discriminant Analysis and the Prediction o
+2026-11-08 13:55:35,259 [INFO]   类型: paper_en | URL: https://doi.org/10.1111/j.1540-6261.1968.tb00843.x
+2026-11-08 13:55:35,259 [INFO]   🔒 需手动下载 (Google Scholar / Sci-Hub)
+2026-11-08 13:55:35,260 [INFO] 
+============================================================
+2026-11-08 13:55:35,260 [INFO] [2/49] P02: ZETA Analysis: A New Model to Identify Bankruptcy Risk of Co
+2026-11-08 13:55:35,260 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/0378-4266(77)90017-1
+2026-11-08 13:55:35,260 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-08 13:55:35,260 [INFO] 
+============================================================
+2026-11-08 13:55:35,260 [INFO] [3/49] P03: Financial Ratios as Predictors of Failure
+2026-11-08 13:55:35,260 [INFO]   类型: paper_en | URL: https://doi.org/10.2307/2490171
+2026-11-08 13:55:35,260 [INFO]   🔒 需手动下载 (JSTOR / Google Scholar)
+2026-11-08 13:55:35,261 [INFO] 
+============================================================
+2026-11-08 13:55:35,261 [INFO] [4/49] P04: Aggregate Confusion: The Divergence of ESG Ratings
+2026-11-08 13:55:35,261 [INFO]   类型: paper_en | URL: https://doi.org/10.1093/rof/rfac033
+2026-11-08 13:55:35,261 [INFO]   🔒 需手动下载 (Oxford Academic / SSRN)
+2026-11-08 13:55:35,261 [INFO] 
+============================================================
+2026-11-08 13:55:35,261 [INFO] [5/49] P05: Financial Distress Prediction with XGBoost and SHAP: An Appl
+2026-11-08 13:55:35,261 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.engappai.2022.105382
+2026-11-08 13:55:35,261 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-08 13:55:35,262 [INFO] 
+============================================================
+2026-11-08 13:55:35,262 [INFO] [6/49] P06: Why Is Corporate Virtue in the Eye of the Beholder? The Case
+2026-11-08 13:55:35,262 [INFO]   类型: paper_en | URL: https://doi.org/10.2308/TAR-2019-0546
+2026-11-08 13:55:35,262 [INFO]   🔒 需手动下载 (SSRN / AAA Digital Library)
+2026-11-08 13:55:35,262 [INFO] 
+============================================================
+2026-11-08 13:55:35,263 [INFO] [7/49] P07: Explainable Machine Learning Models of Consumer Credit Risk
+2026-11-08 13:55:35,263 [INFO]   类型: paper_en | URL: https://doi.org/10.3905/jfds.2023.1.130
+2026-11-08 13:55:35,263 [INFO]   🔒 需手动下载 (CFA Institute / SSRN)
+2026-11-08 13:55:35,263 [INFO] 
+============================================================
+2026-11-08 13:55:35,263 [INFO] [8/49] P08: Machine Learning and Deep Learning for Bankruptcy Prediction
+2026-11-08 13:55:35,263 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.eswa.2024.124782
+2026-11-08 13:55:35,263 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-08 13:55:35,264 [INFO] 
+============================================================
+2026-11-08 13:55:35,264 [INFO] [9/49] P09: Financial Distress Prediction for Small and Medium Enterpris
+2026-11-08 13:55:35,264 [INFO]   类型: paper_en | URL: https://arxiv.org/abs/2302.12118
+2026-11-08 13:55:35,264 [INFO] [DRY-RUN] 将下载: https://arxiv.org/pdf/2302.12118.pdf → downloads\papers\P09_Financial Distress Prediction for Small and Medium Enterprises Using Machine.pdf
+2026-11-08 13:55:35,264 [INFO] 
+============================================================
+2026-11-08 13:55:35,265 [INFO] [10/49] P10: Why Do Tree-Based Models Still Outperform Deep Learning on T
+2026-11-08 13:55:35,265 [INFO]   类型: paper_en | URL: https://proceedings.neurips.cc/paper_files/paper/2022/hash/03a914d6c5e5-Abstract
+2026-11-08 13:55:35,265 [INFO] [DRY-RUN] 将下载: https://proceedings.neurips.cc/paper_files/paper/2022/file/03a914d6c5e5-Paper-Conference.pdf → downloads\papers\P10_Why Do Tree-Based Models Still Outperform Deep Learning on Typical Tabular D.pdf
+2026-11-08 13:55:35,265 [INFO] 
+============================================================
+2026-11-08 13:55:35,265 [INFO] [11/49] P11: Deep Learning versus Traditional Machine Learning for Credit
+2026-11-08 13:55:35,265 [INFO]   类型: paper_en | URL: https://doi.org/10.3905/jfds.2021.3.2.001
+2026-11-08 13:55:35,265 [INFO]   🔒 需手动下载 (CFA Institute / SSRN)
+2026-11-08 13:55:35,265 [INFO] 
+============================================================
+2026-11-08 13:55:35,265 [INFO] [12/49] P12: Financial Distress Prediction Using XGBoost with Improved SH
+2026-11-08 13:55:35,266 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.engappai.2022.105412
+2026-11-08 13:55:35,266 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-08 13:55:35,266 [INFO] 
+============================================================
+2026-11-08 13:55:35,266 [INFO] [13/49] P13: A Unified Approach to Interpreting Model Predictions
+2026-11-08 13:55:35,266 [INFO]   类型: paper_en | URL: https://proceedings.neurips.cc/paper/2017/hash/8a20a8621978632d7cacfb0f8b61ad13-
+2026-11-08 13:55:35,266 [INFO] [DRY-RUN] 将下载: https://proceedings.neurips.cc/paper/2017/file/8a20a8621978632d7cacfb0f8b61ad13-Paper.pdf → downloads\papers\P13_A Unified Approach to Interpreting Model Predictions.pdf
+2026-11-08 13:55:35,266 [INFO] 
+============================================================
+2026-11-08 13:55:35,266 [INFO] [14/49] P14: From Local Explanations to Global Understanding with Explain
+2026-11-08 13:55:35,266 [INFO]   类型: paper_en | URL: https://doi.org/10.1038/s42256-019-0138-9
+2026-11-08 13:55:35,267 [INFO]   🔒 需手动下载 (Nature / PubMed Central)
+2026-11-08 13:55:35,267 [INFO] 
+============================================================
+2026-11-08 13:55:35,267 [INFO] [15/49] P15: On the Pricing of Corporate Debt: The Risk Structure of Inte
+2026-11-08 13:55:35,267 [INFO]   类型: paper_en | URL: https://doi.org/10.1111/j.1540-6261.1974.tb03058.x
+2026-11-08 13:55:35,267 [INFO]   🔒 需手动下载 (Google Scholar / JSTOR)
+2026-11-08 13:55:35,268 [INFO] 
+============================================================
+2026-11-08 13:55:35,268 [INFO] [16/49] P16: Financial Ratios and the Probabilistic Prediction of Bankrup
+2026-11-08 13:55:35,268 [INFO]   类型: paper_en | URL: https://doi.org/10.2307/2490398
+2026-11-08 13:55:35,268 [INFO]   🔒 需手动下载 (JSTOR / Google Scholar)
+2026-11-08 13:55:35,268 [INFO] 
+============================================================
+2026-11-08 13:55:35,268 [INFO] [17/49] P17: Financial Sentiment Analysis on News and Reports Using Large
+2026-11-08 13:55:35,268 [INFO]   类型: paper_en | URL: https://arxiv.org/abs/2410.01987
+2026-11-08 13:55:35,268 [INFO] [DRY-RUN] 将下载: https://arxiv.org/pdf/2410.01987.pdf → downloads\papers\P17_Financial Sentiment Analysis on News and Reports Using Large Language Models.pdf
+2026-11-08 13:55:35,268 [INFO] 
+============================================================
+2026-11-08 13:55:35,268 [INFO] [18/49] P18: Methodological Issues Related to the Estimation of Financial
+2026-11-08 13:55:35,269 [INFO]   类型: paper_en | URL: https://doi.org/10.2307/2490708
+2026-11-08 13:55:35,269 [INFO]   🔒 需手动下载 (JSTOR / Google Scholar)
+2026-11-08 13:55:35,269 [INFO] 
+============================================================
+2026-11-08 13:55:35,269 [INFO] [19/49] P19: ESG评级分歧对企业绿色创新效率的影响研究
+2026-11-08 13:55:35,269 [INFO]   类型: paper_cn | URL: https://doi.org/10.3969/j.issn.1004-910X.2024.10.013
+2026-11-08 13:55:35,269 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-08 13:55:35,270 [INFO] 
+============================================================
+2026-11-08 13:55:35,270 [INFO] [20/49] P20: 企业数字化转型的测度难题：基于大语言模型的新方法与新发现
+2026-11-08 13:55:35,270 [INFO]   类型: paper_cn | URL: 
+2026-11-08 13:55:35,270 [INFO]   🔒 需手动下载 (知网)
+2026-11-08 13:55:35,270 [INFO] 
+============================================================
+2026-11-08 13:55:35,270 [INFO] [21/49] P21: 企业包容性创新的测度：基于大语言模型的新方法
+2026-11-08 13:55:35,270 [INFO]   类型: paper_cn | URL: 
+2026-11-08 13:55:35,270 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-08 13:55:35,271 [INFO] 
+============================================================
+2026-11-08 13:55:35,271 [INFO] [22/49] P22: 基于多期超额收益法评估数据资产价值——以A企业为例
+2026-11-08 13:55:35,271 [INFO]   类型: paper_cn | URL: 
+2026-11-08 13:55:35,271 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-08 13:55:35,271 [INFO] 
+============================================================
+2026-11-08 13:55:35,271 [INFO] [23/49] P23: 基于lightGBM算法的信息技术类上市公司财务危机预测研究
+2026-11-08 13:55:35,271 [INFO]   类型: paper_cn | URL: 
+2026-11-08 13:55:35,271 [INFO]   🔒 需手动下载 (知网 / 万方学位论文库)
+2026-11-08 13:55:35,272 [INFO] 
+============================================================
+2026-11-08 13:55:35,272 [INFO] [24/49] P24: 基于XGBoost算法的财务造假识别研究
+2026-11-08 13:55:35,272 [INFO]   类型: paper_cn | URL: 
+2026-11-08 13:55:35,272 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-08 13:55:35,272 [INFO] 
+============================================================
+2026-11-08 13:55:35,272 [INFO] [25/49] P25: ESG评级分歧与债务资本成本
+2026-11-08 13:55:35,273 [INFO]   类型: paper_cn | URL: 
+2026-11-08 13:55:35,273 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-08 13:55:35,273 [INFO] 
+============================================================
+2026-11-08 13:55:35,273 [INFO] [26/49] P26: ESG表现、绿色创新与企业财务绩效
+2026-11-08 13:55:35,273 [INFO]   类型: paper_cn | URL: 
+2026-11-08 13:55:35,273 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-08 13:55:35,273 [INFO] 
+============================================================
+2026-11-08 13:55:35,273 [INFO] [27/49] B01: XGBoost+SHAP财务预警实战全流程
+2026-11-08 13:55:35,273 [INFO]   类型: blog | URL: https://blog.csdn.net/qq_45932996/article/details/141298400
+2026-11-08 13:55:35,273 [INFO]   📖 博客文章，将在浏览器中打开
+2026-11-08 13:55:35,273 [INFO] [DRY-RUN] 将打开浏览器: https://blog.csdn.net/qq_45932996/article/details/141298400
+2026-11-08 13:55:35,273 [INFO] 
+============================================================
+2026-11-08 13:55:35,274 [INFO] [28/49] B02: 基于Streamlit的金融数据可视化分析系统
+2026-11-08 13:55:35,274 [INFO]   类型: blog | URL: https://blog.csdn.net/2401_89566842/article/details/156275644
+2026-11-08 13:55:35,274 [INFO]   📖 博客文章，将在浏览器中打开
+2026-11-08 13:55:35,274 [INFO] [DRY-RUN] 将打开浏览器: https://blog.csdn.net/2401_89566842/article/details/156275644
+2026-11-08 13:55:35,274 [INFO] 
+============================================================
+2026-11-08 13:55:35,274 [INFO] [29/49] R01: BankruptcyPrediction
+2026-11-08 13:55:35,274 [INFO]   类型: repo | URL: https://github.com/krisssix/BankruptcyPrediction
+2026-11-08 13:55:35,274 [INFO] [DRY-RUN] 将克隆: https://github.com/krisssix/BankruptcyPrediction → downloads\repos\BankruptcyPrediction
+2026-11-08 13:55:35,274 [INFO] 
+============================================================
+2026-11-08 13:55:35,274 [INFO] [30/49] R02: Bankruptcy-Prediction
+2026-11-08 13:55:35,274 [INFO]   类型: repo | URL: https://github.com/benfhicks/Bankruptcy-Prediction
+2026-11-08 13:55:35,275 [INFO] [DRY-RUN] 将克隆: https://github.com/benfhicks/Bankruptcy-Prediction → downloads\repos\Bankruptcy-Prediction
+2026-11-08 13:55:35,275 [INFO] 
+============================================================
+2026-11-08 13:55:35,275 [INFO] [31/49] R03: Financial_Dashboard
+2026-11-08 13:55:35,275 [INFO]   类型: repo | URL: https://github.com/Sk4v/Financial_Dashboard
+2026-11-08 13:55:35,275 [INFO] [DRY-RUN] 将克隆: https://github.com/Sk4v/Financial_Dashboard → downloads\repos\Financial_Dashboard
+2026-11-08 13:55:35,275 [INFO] 
+============================================================
+2026-11-08 13:55:35,275 [INFO] [32/49] R04: FinBERT: 中文金融领域预训练语言模型
+2026-11-08 13:55:35,275 [INFO]   类型: repo | URL: https://github.com/valuesimplex/FinBERT
+2026-11-08 13:55:35,275 [INFO] [DRY-RUN] 将克隆: https://github.com/valuesimplex/FinBERT → downloads\repos\FinBERT
+2026-11-08 13:55:35,275 [INFO] 
+============================================================
+2026-11-08 13:55:35,275 [INFO] [33/49] D01: CNRDS平台新用户注册须知
+2026-11-08 13:55:35,275 [INFO]   类型: data_platform | URL: https://www.cnrds.com
+2026-11-08 13:55:35,275 [INFO]   📋 数据平台资源，已记录到手动清单
+2026-11-08 13:55:35,276 [INFO] 
+============================================================
+2026-11-08 13:55:35,276 [INFO] [34/49] D02: CSMAR数据库使用手册
+2026-11-08 13:55:35,276 [INFO]   类型: data_platform | URL: https://www.gtarsc.com
+2026-11-08 13:55:35,276 [INFO]   📋 数据平台资源，已记录到手动清单
+2026-11-08 13:55:35,276 [INFO] 
+============================================================
+2026-11-08 13:55:35,276 [INFO] [35/49] P27: XGBoost: A Scalable Tree Boosting System
+2026-11-08 13:55:35,276 [INFO]   类型: paper_en | URL: https://arxiv.org/abs/1603.02754
+2026-11-08 13:55:35,277 [INFO] [DRY-RUN] 将下载: https://arxiv.org/pdf/1603.02754.pdf → downloads\papers\P27_XGBoost_ A Scalable Tree Boosting System.pdf
+2026-11-08 13:55:35,277 [INFO] 
+============================================================
+2026-11-08 13:55:35,277 [INFO] [36/49] P28: Optuna: A Next-generation Hyperparameter Optimization Framew
+2026-11-08 13:55:35,277 [INFO]   类型: paper_en | URL: https://arxiv.org/abs/1907.10902
+2026-11-08 13:55:35,277 [INFO] [DRY-RUN] 将下载: https://arxiv.org/pdf/1907.10902.pdf → downloads\papers\P28_Optuna_ A Next-generation Hyperparameter Optimization Framework.pdf
+2026-11-08 13:55:35,277 [INFO] 
+============================================================
+2026-11-08 13:55:35,277 [INFO] [37/49] P29: Machine Learning Models and Bankruptcy Prediction
+2026-11-08 13:55:35,277 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.eswa.2017.05.052
+2026-11-08 13:55:35,277 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-08 13:55:35,278 [INFO] 
+============================================================
+2026-11-08 13:55:35,278 [INFO] [38/49] P30: Bankruptcy Prediction Using Imaged Financial Ratios and Conv
+2026-11-08 13:55:35,278 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.eswa.2018.09.024
+2026-11-08 13:55:35,278 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-08 13:55:35,278 [INFO] 
+============================================================
+2026-11-08 13:55:35,278 [INFO] [39/49] P31: 我国上市公司财务困境的预测模型研究
+2026-11-08 13:55:35,278 [INFO]   类型: paper_cn | URL: 
+2026-11-08 13:55:35,278 [INFO]   🔒 需手动下载 (知网)
+2026-11-08 13:55:35,279 [INFO] 
+============================================================
+2026-11-08 13:55:35,279 [INFO] [40/49] P32: 上市公司财务恶化预测的实证分析
+2026-11-08 13:55:35,279 [INFO]   类型: paper_cn | URL: 
+2026-11-08 13:55:35,279 [INFO]   🔒 需手动下载 (知网)
+2026-11-08 13:55:35,280 [INFO] 
+============================================================
+2026-11-08 13:55:35,280 [INFO] [41/49] P33: 财务危机预警分析判别模型
+2026-11-08 13:55:35,280 [INFO]   类型: paper_cn | URL: 
+2026-11-08 13:55:35,280 [INFO]   🔒 需手动下载 (知网)
+2026-11-08 13:55:35,280 [INFO] 
+============================================================
+2026-11-08 13:55:35,280 [INFO] [42/49] B03: SHAP 官方文档与教程
+2026-11-08 13:55:35,280 [INFO]   类型: blog | URL: https://shap.readthedocs.io/en/latest/
+2026-11-08 13:55:35,280 [INFO]   📖 博客文章，将在浏览器中打开
+2026-11-08 13:55:35,281 [INFO] [DRY-RUN] 将打开浏览器: https://shap.readthedocs.io/en/latest/
+2026-11-08 13:55:35,281 [INFO] 
+============================================================
+2026-11-08 13:55:35,281 [INFO] [43/49] B04: Streamlit 官方文档与组件库
+2026-11-08 13:55:35,281 [INFO]   类型: blog | URL: https://docs.streamlit.io
+2026-11-08 13:55:35,281 [INFO]   📖 博客文章，将在浏览器中打开
+2026-11-08 13:55:35,281 [INFO] [DRY-RUN] 将打开浏览器: https://docs.streamlit.io
+2026-11-08 13:55:35,281 [INFO] 
+============================================================
+2026-11-08 13:55:35,281 [INFO] [44/49] R05: shap
+2026-11-08 13:55:35,281 [INFO]   类型: repo | URL: https://github.com/slundberg/shap
+2026-11-08 13:55:35,282 [INFO] [DRY-RUN] 将克隆: https://github.com/slundberg/shap → downloads\repos\shap
+2026-11-08 13:55:35,282 [INFO] 
+============================================================
+2026-11-08 13:55:35,282 [INFO] [45/49] R06: streamlit
+2026-11-08 13:55:35,282 [INFO]   类型: repo | URL: https://github.com/streamlit/streamlit
+2026-11-08 13:55:35,282 [INFO] [DRY-RUN] 将克隆: https://github.com/streamlit/streamlit → downloads\repos\streamlit
+2026-11-08 13:55:35,282 [INFO] 
+============================================================
+2026-11-08 13:55:35,282 [INFO] [46/49] D03: Tushare 开放数据接口
+2026-11-08 13:55:35,282 [INFO]   类型: data_platform | URL: https://tushare.pro
+2026-11-08 13:55:35,282 [INFO]   📋 数据平台资源，已记录到手动清单
+2026-11-08 13:55:35,282 [INFO] 
+============================================================
+2026-11-08 13:55:35,283 [INFO] [47/49] D04: 国家统计局数据库
+2026-11-08 13:55:35,283 [INFO]   类型: data_platform | URL: https://data.stats.gov.cn
+2026-11-08 13:55:35,283 [INFO]   📋 数据平台资源，已记录到手动清单
+2026-11-08 13:55:35,283 [INFO] 
+============================================================
+2026-11-08 13:55:35,283 [INFO] [48/49] D05: 巨潮资讯网信息披露平台
+2026-11-08 13:55:35,283 [INFO]   类型: data_platform | URL: http://www.cninfo.com.cn
+2026-11-08 13:55:35,283 [INFO]   📋 数据平台资源，已记录到手动清单
+2026-11-08 13:55:35,284 [INFO] 
+============================================================
+2026-11-08 13:55:35,284 [INFO] [49/49] D06: 东方财富数据中心
+2026-11-08 13:55:35,284 [INFO]   类型: data_platform | URL: https://data.eastmoney.com
+2026-11-08 13:55:35,284 [INFO]   📋 数据平台资源，已记录到手动清单
+2026-11-08 13:55:35,285 [INFO] 
+📋 手动下载清单已保存: downloads\manual_download_list.md
+2026-11-08 13:55:35,285 [INFO] 
+============================================================
+2026-11-08 13:55:35,285 [INFO] 📊 下载统计摘要
+2026-11-08 13:55:35,286 [INFO] ============================================================
+2026-11-08 13:55:35,286 [INFO]   ✅ 成功: 12
+2026-11-08 13:55:35,286 [INFO]   ❌ 失败: 0
+2026-11-08 13:55:35,287 [INFO]   🔒 需手动: 37
+2026-11-08 13:55:35,287 [INFO]   ⏭️ 跳过: 0
+2026-11-08 13:55:35,287 [INFO]   📦 总计: 49
+2026-11-08 13:55:35,288 [INFO] ============================================================
+2026-11-08 13:55:35,288 [INFO] 
+✨ 任务完成！
+2026-11-08 13:55:56,247 [INFO] 🚀 财务风险预警研究资源批量下载工具 v1.0
+2026-11-08 13:55:56,247 [INFO]    清单文件: resources_catalog.csv
+2026-11-08 13:55:56,247 [INFO]    资源类型: all
+2026-11-08 13:55:56,247 [INFO]    输出目录: ./downloads
+2026-11-08 13:55:56,247 [INFO]    预览模式: 否
+2026-11-08 13:55:56,248 [INFO]    清单记录数: 49
+2026-11-08 14:50:06,793 [INFO] 🚀 财务风险预警研究资源批量下载工具 v1.0
+2026-11-08 14:50:06,794 [INFO]    清单文件: resources_catalog.csv
+2026-11-08 14:50:06,794 [INFO]    资源类型: paper
+2026-11-08 14:50:06,794 [INFO]    输出目录: ./downloads
+2026-11-08 14:50:06,795 [INFO]    预览模式: 否
+2026-11-08 14:50:06,795 [INFO]    清单记录数: 49
+2026-11-08 14:50:06,796 [INFO]    筛选后记录数: 33
+2026-11-08 14:50:06,796 [INFO] 
+============================================================
+2026-11-08 14:50:06,796 [INFO] [1/33] P01: Financial Ratios, Discriminant Analysis and the Prediction o
+2026-11-08 14:50:06,797 [INFO]   类型: paper_en | URL: https://doi.org/10.1111/j.1540-6261.1968.tb00843.x
+2026-11-08 14:50:06,797 [INFO]   🔒 需手动下载 (Google Scholar / Sci-Hub)
+2026-11-08 14:50:07,023 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1111/j.1540-6261.1968.tb00843.x
+2026-11-08 14:50:07,023 [INFO] 
+============================================================
+2026-11-08 14:50:07,024 [INFO] [2/33] P02: ZETA Analysis: A New Model to Identify Bankruptcy Risk of Co
+2026-11-08 14:50:07,024 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/0378-4266(77)90017-1
+2026-11-08 14:50:07,024 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-08 14:50:07,063 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1016/0378-4266(77)90017-1
+2026-11-08 14:50:07,063 [INFO] 
+============================================================
+2026-11-08 14:50:07,064 [INFO] [3/33] P03: Financial Ratios as Predictors of Failure
+2026-11-08 14:50:07,064 [INFO]   类型: paper_en | URL: https://doi.org/10.2307/2490171
+2026-11-08 14:50:07,064 [INFO]   🔒 需手动下载 (JSTOR / Google Scholar)
+2026-11-08 14:50:07,129 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.2307/2490171
+2026-11-08 14:50:07,129 [INFO] 
+============================================================
+2026-11-08 14:50:07,129 [INFO] [4/33] P04: Aggregate Confusion: The Divergence of ESG Ratings
+2026-11-08 14:50:07,130 [INFO]   类型: paper_en | URL: https://doi.org/10.1093/rof/rfac033
+2026-11-08 14:50:07,130 [INFO]   🔒 需手动下载 (Oxford Academic / SSRN)
+2026-11-08 14:50:07,242 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1093/rof/rfac033
+2026-11-08 14:50:07,242 [INFO] 
+============================================================
+2026-11-08 14:50:07,242 [INFO] [5/33] P05: Financial Distress Prediction with XGBoost and SHAP: An Appl
+2026-11-08 14:50:07,243 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.engappai.2022.105382
+2026-11-08 14:50:07,243 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-08 14:50:07,289 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1016/j.engappai.2022.105382
+2026-11-08 14:50:07,291 [INFO] 
+============================================================
+2026-11-08 14:50:07,291 [INFO] [6/33] P06: Why Is Corporate Virtue in the Eye of the Beholder? The Case
+2026-11-08 14:50:07,291 [INFO]   类型: paper_en | URL: https://doi.org/10.2308/TAR-2019-0546
+2026-11-08 14:50:07,291 [INFO]   🔒 需手动下载 (SSRN / AAA Digital Library)
+2026-11-08 14:50:07,380 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.2308/TAR-2019-0546
+2026-11-08 14:50:07,380 [INFO] 
+============================================================
+2026-11-08 14:50:07,380 [INFO] [7/33] P07: Explainable Machine Learning Models of Consumer Credit Risk
+2026-11-08 14:50:07,381 [INFO]   类型: paper_en | URL: https://doi.org/10.3905/jfds.2023.1.130
+2026-11-08 14:50:07,381 [INFO]   🔒 需手动下载 (CFA Institute / SSRN)
+2026-11-08 14:50:07,428 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.3905/jfds.2023.1.130
+2026-11-08 14:50:07,429 [INFO] 
+============================================================
+2026-11-08 14:50:07,429 [INFO] [8/33] P08: Machine Learning and Deep Learning for Bankruptcy Prediction
+2026-11-08 14:50:07,430 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.eswa.2024.124782
+2026-11-08 14:50:07,430 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-08 14:50:07,492 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1016/j.eswa.2024.124782
+2026-11-08 14:50:07,492 [INFO] 
+============================================================
+2026-11-08 14:50:07,492 [INFO] [9/33] P09: Financial Distress Prediction for Small and Medium Enterpris
+2026-11-08 14:50:07,493 [INFO]   类型: paper_en | URL: https://arxiv.org/abs/2302.12118
+2026-11-08 14:50:17,323 [INFO] ✅ 下载成功: P09_Financial Distress Prediction for Small and Medium Enterprises Using Machine.pdf (1,172,251 bytes)
+2026-11-08 14:50:17,325 [INFO] 
+============================================================
+2026-11-08 14:50:17,326 [INFO] [10/33] P10: Why Do Tree-Based Models Still Outperform Deep Learning on T
+2026-11-08 14:50:17,326 [INFO]   类型: paper_en | URL: https://proceedings.neurips.cc/paper_files/paper/2022/hash/03a914d6c5e5-Abstract
+2026-11-08 14:50:18,927 [WARNING] ⚠️ HTTP错误 (尝试 1/3): 404 Client Error: Not Found for url: https://proceedings.neurips.cc/paper_files/paper/2022/file/03a914d6c5e5-Paper-Conference.pdf
+2026-11-08 14:50:18,939 [INFO]    2秒后重试...
+2026-11-08 14:50:22,577 [WARNING] ⚠️ HTTP错误 (尝试 2/3): 404 Client Error: Not Found for url: https://proceedings.neurips.cc/paper_files/paper/2022/file/03a914d6c5e5-Paper-Conference.pdf
+2026-11-08 14:50:22,578 [INFO]    2秒后重试...
+2026-11-08 14:50:26,071 [WARNING] ⚠️ HTTP错误 (尝试 3/3): 404 Client Error: Not Found for url: https://proceedings.neurips.cc/paper_files/paper/2022/file/03a914d6c5e5-Paper-Conference.pdf
+2026-11-08 14:50:26,071 [ERROR] ❌ 下载失败（已达最大重试次数）: https://proceedings.neurips.cc/paper_files/paper/2022/file/03a914d6c5e5-Paper-Conference.pdf
+2026-11-08 14:50:26,073 [INFO] 
+============================================================
+2026-11-08 14:50:26,074 [INFO] [11/33] P11: Deep Learning versus Traditional Machine Learning for Credit
+2026-11-08 14:50:26,074 [INFO]   类型: paper_en | URL: https://doi.org/10.3905/jfds.2021.3.2.001
+2026-11-08 14:50:26,075 [INFO]   🔒 需手动下载 (CFA Institute / SSRN)
+2026-11-08 14:50:26,155 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.3905/jfds.2021.3.2.001
+2026-11-08 14:50:26,156 [INFO] 
+============================================================
+2026-11-08 14:50:26,156 [INFO] [12/33] P12: Financial Distress Prediction Using XGBoost with Improved SH
+2026-11-08 14:50:26,157 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.engappai.2022.105412
+2026-11-08 14:50:26,157 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-08 14:50:26,245 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1016/j.engappai.2022.105412
+2026-11-08 14:50:26,246 [INFO] 
+============================================================
+2026-11-08 14:50:26,246 [INFO] [13/33] P13: A Unified Approach to Interpreting Model Predictions
+2026-11-08 14:50:26,247 [INFO]   类型: paper_en | URL: https://proceedings.neurips.cc/paper/2017/hash/8a20a8621978632d7cacfb0f8b61ad13-
+2026-11-08 14:50:27,768 [WARNING] ⚠️ HTTP错误 (尝试 1/3): 404 Client Error: Not Found for url: https://proceedings.neurips.cc/paper/2017/file/8a20a8621978632d7cacfb0f8b61ad13-Paper.pdf
+2026-11-08 14:50:27,769 [INFO]    2秒后重试...
+2026-11-08 14:50:30,954 [WARNING] ⚠️ HTTP错误 (尝试 2/3): 404 Client Error: Not Found for url: https://proceedings.neurips.cc/paper/2017/file/8a20a8621978632d7cacfb0f8b61ad13-Paper.pdf
+2026-11-08 14:50:30,955 [INFO]    2秒后重试...
+2026-11-08 14:50:34,250 [WARNING] ⚠️ HTTP错误 (尝试 3/3): 404 Client Error: Not Found for url: https://proceedings.neurips.cc/paper/2017/file/8a20a8621978632d7cacfb0f8b61ad13-Paper.pdf
+2026-11-08 14:50:34,250 [ERROR] ❌ 下载失败（已达最大重试次数）: https://proceedings.neurips.cc/paper/2017/file/8a20a8621978632d7cacfb0f8b61ad13-Paper.pdf
+2026-11-08 14:50:34,252 [INFO] 
+============================================================
+2026-11-08 14:50:34,252 [INFO] [14/33] P14: From Local Explanations to Global Understanding with Explain
+2026-11-08 14:50:34,252 [INFO]   类型: paper_en | URL: https://doi.org/10.1038/s42256-019-0138-9
+2026-11-08 14:50:34,253 [INFO]   🔒 需手动下载 (Nature / PubMed Central)
+2026-11-08 14:50:34,297 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1038/s42256-019-0138-9
+2026-11-08 14:50:34,298 [INFO] 
+============================================================
+2026-11-08 14:50:34,298 [INFO] [15/33] P15: On the Pricing of Corporate Debt: The Risk Structure of Inte
+2026-11-08 14:50:34,298 [INFO]   类型: paper_en | URL: https://doi.org/10.1111/j.1540-6261.1974.tb03058.x
+2026-11-08 14:50:34,298 [INFO]   🔒 需手动下载 (Google Scholar / JSTOR)
+2026-11-08 14:50:34,359 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1111/j.1540-6261.1974.tb03058.x
+2026-11-08 14:50:34,359 [INFO] 
+============================================================
+2026-11-08 14:50:34,360 [INFO] [16/33] P16: Financial Ratios and the Probabilistic Prediction of Bankrup
+2026-11-08 14:50:34,360 [INFO]   类型: paper_en | URL: https://doi.org/10.2307/2490398
+2026-11-08 14:50:34,361 [INFO]   🔒 需手动下载 (JSTOR / Google Scholar)
+2026-11-08 14:50:34,424 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.2307/2490398
+2026-11-08 14:50:34,424 [INFO] 
+============================================================
+2026-11-08 14:50:34,425 [INFO] [17/33] P17: Financial Sentiment Analysis on News and Reports Using Large
+2026-11-08 14:50:34,425 [INFO]   类型: paper_en | URL: https://arxiv.org/abs/2410.01987
+2026-11-08 14:50:52,272 [INFO] ✅ 下载成功: P17_Financial Sentiment Analysis on News and Reports Using Large Language Models.pdf (1,828,033 bytes)
+2026-11-08 14:50:52,275 [INFO] 
+============================================================
+2026-11-08 14:50:52,276 [INFO] [18/33] P18: Methodological Issues Related to the Estimation of Financial
+2026-11-08 14:50:52,276 [INFO]   类型: paper_en | URL: https://doi.org/10.2307/2490708
+2026-11-08 14:50:52,277 [INFO]   🔒 需手动下载 (JSTOR / Google Scholar)
+2026-11-08 14:50:52,355 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.2307/2490708
+2026-11-08 14:50:52,356 [INFO] 
+============================================================
+2026-11-08 14:50:52,356 [INFO] [19/33] P19: ESG评级分歧对企业绿色创新效率的影响研究
+2026-11-08 14:50:52,357 [INFO]   类型: paper_cn | URL: https://doi.org/10.3969/j.issn.1004-910X.2024.10.013
+2026-11-08 14:50:52,357 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-08 14:50:52,442 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.3969/j.issn.1004-910X.2024.10.013
+2026-11-08 14:50:52,442 [INFO] 
+============================================================
+2026-11-08 14:50:52,443 [INFO] [20/33] P20: 企业数字化转型的测度难题：基于大语言模型的新方法与新发现
+2026-11-08 14:50:52,443 [INFO]   类型: paper_cn | URL: 
+2026-11-08 14:50:52,444 [INFO]   🔒 需手动下载 (知网)
+2026-11-08 14:50:52,444 [INFO] 
+============================================================
+2026-11-08 14:50:52,444 [INFO] [21/33] P21: 企业包容性创新的测度：基于大语言模型的新方法
+2026-11-08 14:50:52,446 [INFO]   类型: paper_cn | URL: 
+2026-11-08 14:50:52,446 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-08 14:50:52,446 [INFO] 
+============================================================
+2026-11-08 14:50:52,447 [INFO] [22/33] P22: 基于多期超额收益法评估数据资产价值——以A企业为例
+2026-11-08 14:50:52,447 [INFO]   类型: paper_cn | URL: 
+2026-11-08 14:50:52,447 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-08 14:50:52,448 [INFO] 
+============================================================
+2026-11-08 14:50:52,448 [INFO] [23/33] P23: 基于lightGBM算法的信息技术类上市公司财务危机预测研究
+2026-11-08 14:50:52,448 [INFO]   类型: paper_cn | URL: 
+2026-11-08 14:50:52,449 [INFO]   🔒 需手动下载 (知网 / 万方学位论文库)
+2026-11-08 14:50:52,449 [INFO] 
+============================================================
+2026-11-08 14:50:52,450 [INFO] [24/33] P24: 基于XGBoost算法的财务造假识别研究
+2026-11-08 14:50:52,450 [INFO]   类型: paper_cn | URL: 
+2026-11-08 14:50:52,450 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-08 14:50:52,451 [INFO] 
+============================================================
+2026-11-08 14:50:52,451 [INFO] [25/33] P25: ESG评级分歧与债务资本成本
+2026-11-08 14:50:52,451 [INFO]   类型: paper_cn | URL: 
+2026-11-08 14:50:52,452 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-08 14:50:52,452 [INFO] 
+============================================================
+2026-11-08 14:50:52,453 [INFO] [26/33] P26: ESG表现、绿色创新与企业财务绩效
+2026-11-08 14:50:52,453 [INFO]   类型: paper_cn | URL: 
+2026-11-08 14:50:52,453 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-08 14:50:52,454 [INFO] 
+============================================================
+2026-11-08 14:50:52,454 [INFO] [27/33] P27: XGBoost: A Scalable Tree Boosting System
+2026-11-08 14:50:52,454 [INFO]   类型: paper_en | URL: https://arxiv.org/abs/1603.02754
+2026-11-08 14:50:59,985 [INFO] ✅ 下载成功: P27_XGBoost_ A Scalable Tree Boosting System.pdf (944,793 bytes)
+2026-11-08 14:50:59,986 [INFO] 
+============================================================
+2026-11-08 14:50:59,986 [INFO] [28/33] P28: Optuna: A Next-generation Hyperparameter Optimization Framew
+2026-11-08 14:50:59,986 [INFO]   类型: paper_en | URL: https://arxiv.org/abs/1907.10902
+2026-11-08 14:51:04,269 [INFO] ✅ 下载成功: P28_Optuna_ A Next-generation Hyperparameter Optimization Framework.pdf (1,096,378 bytes)
+2026-11-08 14:51:04,270 [INFO] 
+============================================================
+2026-11-08 14:51:04,271 [INFO] [29/33] P29: Machine Learning Models and Bankruptcy Prediction
+2026-11-08 14:51:04,271 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.eswa.2017.05.052
+2026-11-08 14:51:04,271 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-08 14:51:04,318 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1016/j.eswa.2017.05.052
+2026-11-08 14:51:04,318 [INFO] 
+============================================================
+2026-11-08 14:51:04,318 [INFO] [30/33] P30: Bankruptcy Prediction Using Imaged Financial Ratios and Conv
+2026-11-08 14:51:04,318 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.eswa.2018.09.024
+2026-11-08 14:51:04,319 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-08 14:51:04,362 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1016/j.eswa.2018.09.024
+2026-11-08 14:51:04,363 [INFO] 
+============================================================
+2026-11-08 14:51:04,363 [INFO] [31/33] P31: 我国上市公司财务困境的预测模型研究
+2026-11-08 14:51:04,363 [INFO]   类型: paper_cn | URL: 
+2026-11-08 14:51:04,363 [INFO]   🔒 需手动下载 (知网)
+2026-11-08 14:51:04,364 [INFO] 
+============================================================
+2026-11-08 14:51:04,364 [INFO] [32/33] P32: 上市公司财务恶化预测的实证分析
+2026-11-08 14:51:04,364 [INFO]   类型: paper_cn | URL: 
+2026-11-08 14:51:04,364 [INFO]   🔒 需手动下载 (知网)
+2026-11-08 14:51:04,364 [INFO] 
+============================================================
+2026-11-08 14:51:04,365 [INFO] [33/33] P33: 财务危机预警分析判别模型
+2026-11-08 14:51:04,365 [INFO]   类型: paper_cn | URL: 
+2026-11-08 14:51:04,365 [INFO]   🔒 需手动下载 (知网)
+2026-11-08 14:51:04,366 [INFO] 
+📋 手动下载清单已保存: downloads\manual_download_list.md
+2026-11-08 14:51:04,366 [INFO] 
+============================================================
+2026-11-08 14:51:04,366 [INFO] 📊 下载统计摘要
+2026-11-08 14:51:04,367 [INFO] ============================================================
+2026-11-08 14:51:04,367 [INFO]   ✅ 成功: 4
+2026-11-08 14:51:04,367 [INFO]   ❌ 失败: 2
+2026-11-08 14:51:04,367 [INFO]   🔒 需手动: 27
+2026-11-08 14:51:04,367 [INFO]   ⏭️ 跳过: 0
+2026-11-08 14:51:04,368 [INFO]   📦 总计: 33
+2026-11-08 14:51:04,368 [INFO] ============================================================
+2026-11-08 14:51:04,368 [INFO] 
+✨ 任务完成！
+2026-11-11 19:34:12,329 [INFO] 🚀 财务风险预警研究资源批量下载工具 v1.0
+2026-11-11 19:34:12,329 [INFO]    清单文件: resources_catalog.csv
+2026-11-11 19:34:12,329 [INFO]    资源类型: all
+2026-11-11 19:34:12,329 [INFO]    输出目录: ./downloads
+2026-11-11 19:34:12,329 [INFO]    预览模式: 否
+2026-11-11 19:34:12,348 [INFO]    清单记录数: 49
+2026-11-11 19:34:12,349 [INFO]    筛选后记录数: 49
+2026-11-11 19:34:12,349 [INFO] 
+============================================================
+2026-11-11 19:34:12,349 [INFO] [1/49] P01: Financial Ratios, Discriminant Analysis and the Prediction o
+2026-11-11 19:34:12,349 [INFO]   类型: paper_en | URL: https://doi.org/10.1111/j.1540-6261.1968.tb00843.x
+2026-11-11 19:34:12,349 [INFO]   🔒 需手动下载 (Google Scholar / Sci-Hub)
+2026-11-11 19:34:12,519 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1111/j.1540-6261.1968.tb00843.x
+2026-11-11 19:34:12,519 [INFO] 
+============================================================
+2026-11-11 19:34:12,520 [INFO] [2/49] P02: ZETA Analysis: A New Model to Identify Bankruptcy Risk of Co
+2026-11-11 19:34:12,520 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/0378-4266(77)90017-1
+2026-11-11 19:34:12,520 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-11 19:34:12,571 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1016/0378-4266(77)90017-1
+2026-11-11 19:34:12,572 [INFO] 
+============================================================
+2026-11-11 19:34:12,572 [INFO] [3/49] P03: Financial Ratios as Predictors of Failure
+2026-11-11 19:34:12,572 [INFO]   类型: paper_en | URL: https://doi.org/10.2307/2490171
+2026-11-11 19:34:12,572 [INFO]   🔒 需手动下载 (JSTOR / Google Scholar)
+2026-11-11 19:34:12,619 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.2307/2490171
+2026-11-11 19:34:12,619 [INFO] 
+============================================================
+2026-11-11 19:34:12,619 [INFO] [4/49] P04: Aggregate Confusion: The Divergence of ESG Ratings
+2026-11-11 19:34:12,619 [INFO]   类型: paper_en | URL: https://doi.org/10.1093/rof/rfac033
+2026-11-11 19:34:12,619 [INFO]   🔒 需手动下载 (Oxford Academic / SSRN)
+2026-11-11 19:34:12,695 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1093/rof/rfac033
+2026-11-11 19:34:12,695 [INFO] 
+============================================================
+2026-11-11 19:34:12,695 [INFO] [5/49] P05: Financial Distress Prediction with XGBoost and SHAP: An Appl
+2026-11-11 19:34:12,696 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.engappai.2022.105382
+2026-11-11 19:34:12,696 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-11 19:34:12,738 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1016/j.engappai.2022.105382
+2026-11-11 19:34:12,738 [INFO] 
+============================================================
+2026-11-11 19:34:12,738 [INFO] [6/49] P06: Why Is Corporate Virtue in the Eye of the Beholder? The Case
+2026-11-11 19:34:12,738 [INFO]   类型: paper_en | URL: https://doi.org/10.2308/TAR-2019-0546
+2026-11-11 19:34:12,738 [INFO]   🔒 需手动下载 (SSRN / AAA Digital Library)
+2026-11-11 19:34:12,780 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.2308/TAR-2019-0546
+2026-11-11 19:34:12,780 [INFO] 
+============================================================
+2026-11-11 19:34:12,780 [INFO] [7/49] P07: Explainable Machine Learning Models of Consumer Credit Risk
+2026-11-11 19:34:12,780 [INFO]   类型: paper_en | URL: https://doi.org/10.3905/jfds.2023.1.130
+2026-11-11 19:34:12,780 [INFO]   🔒 需手动下载 (CFA Institute / SSRN)
+2026-11-11 19:34:12,825 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.3905/jfds.2023.1.130
+2026-11-11 19:34:12,825 [INFO] 
+============================================================
+2026-11-11 19:34:12,825 [INFO] [8/49] P08: Machine Learning and Deep Learning for Bankruptcy Prediction
+2026-11-11 19:34:12,826 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.eswa.2024.124782
+2026-11-11 19:34:12,826 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-11 19:34:12,876 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1016/j.eswa.2024.124782
+2026-11-11 19:34:12,876 [INFO] 
+============================================================
+2026-11-11 19:34:12,876 [INFO] [9/49] P09: Financial Distress Prediction for Small and Medium Enterpris
+2026-11-11 19:34:12,876 [INFO]   类型: paper_en | URL: https://arxiv.org/abs/2302.12118
+2026-11-11 19:34:12,876 [INFO] ⏭️ 已存在，跳过: P09_Financial Distress Prediction for Small and Medium Enterprises Using Machine.pdf
+2026-11-11 19:34:12,877 [INFO] 
+============================================================
+2026-11-11 19:34:12,877 [INFO] [10/49] P10: Why Do Tree-Based Models Still Outperform Deep Learning on T
+2026-11-11 19:34:12,877 [INFO]   类型: paper_en | URL: https://proceedings.neurips.cc/paper_files/paper/2022/hash/03a914d6c5e5-Abstract
+2026-11-11 19:34:14,388 [WARNING] ⚠️ HTTP错误 (尝试 1/3): 404 Client Error: Not Found for url: https://proceedings.neurips.cc/paper_files/paper/2022/file/03a914d6c5e5-Paper-Conference.pdf
+2026-11-11 19:34:14,388 [INFO]    2秒后重试...
+2026-11-11 19:34:18,231 [WARNING] ⚠️ HTTP错误 (尝试 2/3): 404 Client Error: Not Found for url: https://proceedings.neurips.cc/paper_files/paper/2022/file/03a914d6c5e5-Paper-Conference.pdf
+2026-11-11 19:34:18,232 [INFO]    2秒后重试...
+2026-11-11 19:34:21,920 [WARNING] ⚠️ HTTP错误 (尝试 3/3): 404 Client Error: Not Found for url: https://proceedings.neurips.cc/paper_files/paper/2022/file/03a914d6c5e5-Paper-Conference.pdf
+2026-11-11 19:34:21,921 [ERROR] ❌ 下载失败（已达最大重试次数）: https://proceedings.neurips.cc/paper_files/paper/2022/file/03a914d6c5e5-Paper-Conference.pdf
+2026-11-11 19:34:21,923 [INFO] 
+============================================================
+2026-11-11 19:34:21,924 [INFO] [11/49] P11: Deep Learning versus Traditional Machine Learning for Credit
+2026-11-11 19:34:21,924 [INFO]   类型: paper_en | URL: https://doi.org/10.3905/jfds.2021.3.2.001
+2026-11-11 19:34:21,924 [INFO]   🔒 需手动下载 (CFA Institute / SSRN)
+2026-11-11 19:34:21,995 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.3905/jfds.2021.3.2.001
+2026-11-11 19:34:21,997 [INFO] 
+============================================================
+2026-11-11 19:34:21,997 [INFO] [12/49] P12: Financial Distress Prediction Using XGBoost with Improved SH
+2026-11-11 19:34:21,997 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.engappai.2022.105412
+2026-11-11 19:34:21,997 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-11 19:34:22,042 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1016/j.engappai.2022.105412
+2026-11-11 19:34:22,042 [INFO] 
+============================================================
+2026-11-11 19:34:22,042 [INFO] [13/49] P13: A Unified Approach to Interpreting Model Predictions
+2026-11-11 19:34:22,042 [INFO]   类型: paper_en | URL: https://proceedings.neurips.cc/paper/2017/hash/8a20a8621978632d7cacfb0f8b61ad13-
+2026-11-11 19:34:23,798 [WARNING] ⚠️ HTTP错误 (尝试 1/3): 404 Client Error: Not Found for url: https://proceedings.neurips.cc/paper/2017/file/8a20a8621978632d7cacfb0f8b61ad13-Paper.pdf
+2026-11-11 19:34:23,798 [INFO]    2秒后重试...
+2026-11-11 19:34:27,528 [WARNING] ⚠️ HTTP错误 (尝试 2/3): 404 Client Error: Not Found for url: https://proceedings.neurips.cc/paper/2017/file/8a20a8621978632d7cacfb0f8b61ad13-Paper.pdf
+2026-11-11 19:34:27,529 [INFO]    2秒后重试...
+2026-11-11 19:34:31,336 [WARNING] ⚠️ HTTP错误 (尝试 3/3): 404 Client Error: Not Found for url: https://proceedings.neurips.cc/paper/2017/file/8a20a8621978632d7cacfb0f8b61ad13-Paper.pdf
+2026-11-11 19:34:31,337 [ERROR] ❌ 下载失败（已达最大重试次数）: https://proceedings.neurips.cc/paper/2017/file/8a20a8621978632d7cacfb0f8b61ad13-Paper.pdf
+2026-11-11 19:34:31,339 [INFO] 
+============================================================
+2026-11-11 19:34:31,340 [INFO] [14/49] P14: From Local Explanations to Global Understanding with Explain
+2026-11-11 19:34:31,340 [INFO]   类型: paper_en | URL: https://doi.org/10.1038/s42256-019-0138-9
+2026-11-11 19:34:31,340 [INFO]   🔒 需手动下载 (Nature / PubMed Central)
+2026-11-11 19:34:31,410 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1038/s42256-019-0138-9
+2026-11-11 19:34:31,411 [INFO] 
+============================================================
+2026-11-11 19:34:31,411 [INFO] [15/49] P15: On the Pricing of Corporate Debt: The Risk Structure of Inte
+2026-11-11 19:34:31,411 [INFO]   类型: paper_en | URL: https://doi.org/10.1111/j.1540-6261.1974.tb03058.x
+2026-11-11 19:34:31,411 [INFO]   🔒 需手动下载 (Google Scholar / JSTOR)
+2026-11-11 19:34:31,461 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1111/j.1540-6261.1974.tb03058.x
+2026-11-11 19:34:31,461 [INFO] 
+============================================================
+2026-11-11 19:34:31,461 [INFO] [16/49] P16: Financial Ratios and the Probabilistic Prediction of Bankrup
+2026-11-11 19:34:31,461 [INFO]   类型: paper_en | URL: https://doi.org/10.2307/2490398
+2026-11-11 19:34:31,461 [INFO]   🔒 需手动下载 (JSTOR / Google Scholar)
+2026-11-11 19:34:31,519 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.2307/2490398
+2026-11-11 19:34:31,520 [INFO] 
+============================================================
+2026-11-11 19:34:31,520 [INFO] [17/49] P17: Financial Sentiment Analysis on News and Reports Using Large
+2026-11-11 19:34:31,520 [INFO]   类型: paper_en | URL: https://arxiv.org/abs/2410.01987
+2026-11-11 19:34:31,521 [INFO] ⏭️ 已存在，跳过: P17_Financial Sentiment Analysis on News and Reports Using Large Language Models.pdf
+2026-11-11 19:34:31,521 [INFO] 
+============================================================
+2026-11-11 19:34:31,521 [INFO] [18/49] P18: Methodological Issues Related to the Estimation of Financial
+2026-11-11 19:34:31,521 [INFO]   类型: paper_en | URL: https://doi.org/10.2307/2490708
+2026-11-11 19:34:31,521 [INFO]   🔒 需手动下载 (JSTOR / Google Scholar)
+2026-11-11 19:34:31,584 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.2307/2490708
+2026-11-11 19:34:31,584 [INFO] 
+============================================================
+2026-11-11 19:34:31,584 [INFO] [19/49] P19: ESG评级分歧对企业绿色创新效率的影响研究
+2026-11-11 19:34:31,584 [INFO]   类型: paper_cn | URL: https://doi.org/10.3969/j.issn.1004-910X.2024.10.013
+2026-11-11 19:34:31,584 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-11 19:34:31,639 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.3969/j.issn.1004-910X.2024.10.013
+2026-11-11 19:34:31,639 [INFO] 
+============================================================
+2026-11-11 19:34:31,640 [INFO] [20/49] P20: 企业数字化转型的测度难题：基于大语言模型的新方法与新发现
+2026-11-11 19:34:31,640 [INFO]   类型: paper_cn | URL: 
+2026-11-11 19:34:31,640 [INFO]   🔒 需手动下载 (知网)
+2026-11-11 19:34:31,640 [INFO] 
+============================================================
+2026-11-11 19:34:31,640 [INFO] [21/49] P21: 企业包容性创新的测度：基于大语言模型的新方法
+2026-11-11 19:34:31,640 [INFO]   类型: paper_cn | URL: 
+2026-11-11 19:34:31,640 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-11 19:34:31,641 [INFO] 
+============================================================
+2026-11-11 19:34:31,641 [INFO] [22/49] P22: 基于多期超额收益法评估数据资产价值——以A企业为例
+2026-11-11 19:34:31,641 [INFO]   类型: paper_cn | URL: 
+2026-11-11 19:34:31,641 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-11 19:34:31,641 [INFO] 
+============================================================
+2026-11-11 19:34:31,642 [INFO] [23/49] P23: 基于lightGBM算法的信息技术类上市公司财务危机预测研究
+2026-11-11 19:34:31,642 [INFO]   类型: paper_cn | URL: 
+2026-11-11 19:34:31,642 [INFO]   🔒 需手动下载 (知网 / 万方学位论文库)
+2026-11-11 19:34:31,642 [INFO] 
+============================================================
+2026-11-11 19:34:31,642 [INFO] [24/49] P24: 基于XGBoost算法的财务造假识别研究
+2026-11-11 19:34:31,642 [INFO]   类型: paper_cn | URL: 
+2026-11-11 19:34:31,643 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-11 19:34:31,643 [INFO] 
+============================================================
+2026-11-11 19:34:31,643 [INFO] [25/49] P25: ESG评级分歧与债务资本成本
+2026-11-11 19:34:31,643 [INFO]   类型: paper_cn | URL: 
+2026-11-11 19:34:31,643 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-11 19:34:31,643 [INFO] 
+============================================================
+2026-11-11 19:34:31,643 [INFO] [26/49] P26: ESG表现、绿色创新与企业财务绩效
+2026-11-11 19:34:31,644 [INFO]   类型: paper_cn | URL: 
+2026-11-11 19:34:31,644 [INFO]   🔒 需手动下载 (知网 / 万方)
+2026-11-11 19:34:31,644 [INFO] 
+============================================================
+2026-11-11 19:34:31,644 [INFO] [27/49] B01: XGBoost+SHAP财务预警实战全流程
+2026-11-11 19:34:31,644 [INFO]   类型: blog | URL: https://blog.csdn.net/qq_45932996/article/details/141298400
+2026-11-11 19:34:31,644 [INFO]   📖 博客文章，将在浏览器中打开
+2026-11-11 19:34:31,722 [INFO] 🌐 已在浏览器中打开: https://blog.csdn.net/qq_45932996/article/details/141298400
+2026-11-11 19:34:31,722 [INFO] 
+============================================================
+2026-11-11 19:34:31,722 [INFO] [28/49] B02: 基于Streamlit的金融数据可视化分析系统
+2026-11-11 19:34:31,722 [INFO]   类型: blog | URL: https://blog.csdn.net/2401_89566842/article/details/156275644
+2026-11-11 19:34:31,722 [INFO]   📖 博客文章，将在浏览器中打开
+2026-11-11 19:34:31,771 [INFO] 🌐 已在浏览器中打开: https://blog.csdn.net/2401_89566842/article/details/156275644
+2026-11-11 19:34:31,771 [INFO] 
+============================================================
+2026-11-11 19:34:31,771 [INFO] [29/49] R01: BankruptcyPrediction
+2026-11-11 19:34:31,771 [INFO]   类型: repo | URL: https://github.com/krisssix/BankruptcyPrediction
+2026-11-11 19:34:51,979 [INFO] ✅ 克隆成功: BankruptcyPrediction
+2026-11-11 19:34:51,980 [INFO] 
+============================================================
+2026-11-11 19:34:51,980 [INFO] [30/49] R02: Bankruptcy-Prediction
+2026-11-11 19:34:51,980 [INFO]   类型: repo | URL: https://github.com/benfhicks/Bankruptcy-Prediction
+2026-11-11 19:34:54,466 [INFO] ✅ 克隆成功: Bankruptcy-Prediction
+2026-11-11 19:34:54,466 [INFO] 
+============================================================
+2026-11-11 19:34:54,466 [INFO] [31/49] R03: Financial_Dashboard
+2026-11-11 19:34:54,467 [INFO]   类型: repo | URL: https://github.com/Sk4v/Financial_Dashboard
+2026-11-11 19:34:56,472 [INFO] ✅ 克隆成功: Financial_Dashboard
+2026-11-11 19:34:56,473 [INFO] 
+============================================================
+2026-11-11 19:34:56,473 [INFO] [32/49] R04: FinBERT: 中文金融领域预训练语言模型
+2026-11-11 19:34:56,473 [INFO]   类型: repo | URL: https://github.com/valuesimplex/FinBERT
+2026-11-11 19:35:03,424 [INFO] ✅ 克隆成功: FinBERT
+2026-11-11 19:35:03,424 [INFO] 
+============================================================
+2026-11-11 19:35:03,424 [INFO] [33/49] D01: CNRDS平台新用户注册须知
+2026-11-11 19:35:03,424 [INFO]   类型: data_platform | URL: https://www.cnrds.com
+2026-11-11 19:35:03,425 [INFO]   📋 数据平台资源，已记录到手动清单
+2026-11-11 19:35:03,425 [INFO] 
+============================================================
+2026-11-11 19:35:03,425 [INFO] [34/49] D02: CSMAR数据库使用手册
+2026-11-11 19:35:03,425 [INFO]   类型: data_platform | URL: https://www.gtarsc.com
+2026-11-11 19:35:03,425 [INFO]   📋 数据平台资源，已记录到手动清单
+2026-11-11 19:35:03,425 [INFO] 
+============================================================
+2026-11-11 19:35:03,425 [INFO] [35/49] P27: XGBoost: A Scalable Tree Boosting System
+2026-11-11 19:35:03,425 [INFO]   类型: paper_en | URL: https://arxiv.org/abs/1603.02754
+2026-11-11 19:35:03,426 [INFO] ⏭️ 已存在，跳过: P27_XGBoost_ A Scalable Tree Boosting System.pdf
+2026-11-11 19:35:03,426 [INFO] 
+============================================================
+2026-11-11 19:35:03,426 [INFO] [36/49] P28: Optuna: A Next-generation Hyperparameter Optimization Framew
+2026-11-11 19:35:03,426 [INFO]   类型: paper_en | URL: https://arxiv.org/abs/1907.10902
+2026-11-11 19:35:03,427 [INFO] ⏭️ 已存在，跳过: P28_Optuna_ A Next-generation Hyperparameter Optimization Framework.pdf
+2026-11-11 19:35:03,427 [INFO] 
+============================================================
+2026-11-11 19:35:03,427 [INFO] [37/49] P29: Machine Learning Models and Bankruptcy Prediction
+2026-11-11 19:35:03,427 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.eswa.2017.05.052
+2026-11-11 19:35:03,427 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-11 19:35:03,494 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1016/j.eswa.2017.05.052
+2026-11-11 19:35:03,495 [INFO] 
+============================================================
+2026-11-11 19:35:03,495 [INFO] [38/49] P30: Bankruptcy Prediction Using Imaged Financial Ratios and Conv
+2026-11-11 19:35:03,495 [INFO]   类型: paper_en | URL: https://doi.org/10.1016/j.eswa.2018.09.024
+2026-11-11 19:35:03,495 [INFO]   🔒 需手动下载 (ScienceDirect / Sci-Hub)
+2026-11-11 19:35:03,539 [INFO] 🌐 已在浏览器中打开: https://doi.org/10.1016/j.eswa.2018.09.024
+2026-11-11 19:35:03,539 [INFO] 
+============================================================
+2026-11-11 19:35:03,539 [INFO] [39/49] P31: 我国上市公司财务困境的预测模型研究
+2026-11-11 19:35:03,539 [INFO]   类型: paper_cn | URL: 
+2026-11-11 19:35:03,539 [INFO]   🔒 需手动下载 (知网)
+2026-11-11 19:35:03,539 [INFO] 
+============================================================
+2026-11-11 19:35:03,541 [INFO] [40/49] P32: 上市公司财务恶化预测的实证分析
+2026-11-11 19:35:03,541 [INFO]   类型: paper_cn | URL: 
+2026-11-11 19:35:03,541 [INFO]   🔒 需手动下载 (知网)
+2026-11-11 19:35:03,541 [INFO] 
+============================================================
+2026-11-11 19:35:03,541 [INFO] [41/49] P33: 财务危机预警分析判别模型
+2026-11-11 19:35:03,541 [INFO]   类型: paper_cn | URL: 
+2026-11-11 19:35:03,541 [INFO]   🔒 需手动下载 (知网)
+2026-11-11 19:35:03,541 [INFO] 
+============================================================
+2026-11-11 19:35:03,542 [INFO] [42/49] B03: SHAP 官方文档与教程
+2026-11-11 19:35:03,542 [INFO]   类型: blog | URL: https://shap.readthedocs.io/en/latest/
+2026-11-11 19:35:03,542 [INFO]   📖 博客文章，将在浏览器中打开
+2026-11-11 19:35:03,597 [INFO] 🌐 已在浏览器中打开: https://shap.readthedocs.io/en/latest/
+2026-11-11 19:35:03,598 [INFO] 
+============================================================
+2026-11-11 19:35:03,598 [INFO] [43/49] B04: Streamlit 官方文档与组件库
+2026-11-11 19:35:03,598 [INFO]   类型: blog | URL: https://docs.streamlit.io
+2026-11-11 19:35:03,598 [INFO]   📖 博客文章，将在浏览器中打开
+2026-11-11 19:35:03,669 [INFO] 🌐 已在浏览器中打开: https://docs.streamlit.io
+2026-11-11 19:35:03,669 [INFO] 
+============================================================
+2026-11-11 19:35:03,670 [INFO] [44/49] R05: shap
+2026-11-11 19:35:03,670 [INFO]   类型: repo | URL: https://github.com/slundberg/shap
+2026-11-11 19:36:32,555 [INFO] ✅ 克隆成功: shap
+2026-11-11 19:36:32,555 [INFO] 
+============================================================
+2026-11-11 19:36:32,555 [INFO] [45/49] R06: streamlit
+2026-11-11 19:36:32,555 [INFO]   类型: repo | URL: https://github.com/streamlit/streamlit
+2026-11-11 19:37:45,060 [ERROR] ❌ 克隆失败: Cloning into 'downloads\repos\streamlit'...
+Updating files:   5% (605/10256)
+Updating files:   6% (616/10256)
+Updating files:   7% (718/10256)
+Updating files:   8% (821/10256)
+Updating files:   9% (924/10256)
+Updating files:  10% (1026/10256)
+Updating files:  11% (1129/10256)
+Updating files:  12% (1231/10256)
+Updating files:  12% (1292/10256)
+Updating files:  13% (1334/10256)
+Updating files:  14% (1436/10256)
+Updating files:  15% (1539/10256)
+Updating files:  16% (1641/10256)
+Updating files:  17% (1744/10256)
+Updating files:  18% (1847/10256)
+Updating files:  19% (1949/10256)
+Updating files:  19% (2024/10256)
+Updating files:  20% (2052/10256)
+Updating files:  21% (2154/10256)
+Updating files:  22% (2257/10256)
+Updating files:  23% (2359/10256)
+Updating files:  24% (2462/10256)
+Updating files:  25% (2564/10256)
+Updating files:  26% (2667/10256)
+Updating files:  26% (2690/10256)
+Updating files:  27% (2770/10256)
+Updating files:  28% (2872/10256)
+Updating files:  29% (2975/10256)
+Updating files:  30% (3077/10256)
+Updating files:  31% (3180/10256)
+Updating files:  32% (3282/10256)
+Updating files:  33% (3385/10256)
+Updating files:  33% (3422/10256)
+Updating files:  34% (3488/10256)
+Updating files:  35% (3590/10256)
+Updating files:  36% (3693/10256)
+Updating files:  37% (3795/10256)
+Updating files:  38% (3898/10256)
+Updating files:  39% (4000/10256)
+Updating files:  40% (4103/10256)
+Updating files:  40% (4188/10256)
+Updating files:  41% (4205/10256)
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_directions_fullscreen_elements_test/st_layouts_container_directions_fullscreen_elements-dataframe-fullscreen_collapsed[chromium].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_directions_fullscreen_elements_test/st_layouts_container_directions_fullscreen_elements-dataframe-fullscreen_collapsed[firefox].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_directions_fullscreen_elements_test/st_layouts_container_directions_fullscreen_elements-dataframe-fullscreen_collapsed[webkit].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_directions_fullscreen_elements_test/st_layouts_container_directions_fullscreen_elements-dataframe-fullscreen_expanded[chromium].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_directions_fullscreen_elements_test/st_layouts_container_directions_fullscreen_elements-dataframe-fullscreen_expanded[firefox].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_directions_fullscreen_elements_test/st_layouts_container_directions_fullscreen_elements-dataframe-fullscreen_expanded[webkit].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_directions_fullscreen_elements_test/st_layouts_container_directions_fullscreen_elements-vega_lite_chart-fullscreen_collapsed[chromium].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_directions_fullscreen_elements_test/st_layouts_container_directions_fullscreen_elements-vega_lite_chart-fullscreen_collapsed[firefox].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_directions_fullscreen_elements_test/st_layouts_container_directions_fullscreen_elements-vega_lite_chart-fullscreen_collapsed[webkit].png: Filename too long
+Updating files:  42% (4308/10256)
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_directions_fullscreen_elements_test/st_layouts_container_directions_fullscreen_elements-vega_lite_chart-fullscreen_expanded[chromium].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_directions_fullscreen_elements_test/st_layouts_container_directions_fullscreen_elements-vega_lite_chart-fullscreen_expanded[firefox].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_directions_fullscreen_elements_test/st_layouts_container_directions_fullscreen_elements-vega_lite_chart-fullscreen_expanded[webkit].png: Filename too long
+Updating files:  43% (4411/10256)
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-horizontal-content-width-container-with-metrics-dataframes-line-charts[chromium].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-horizontal-content-width-container-with-metrics-dataframes-line-charts[firefox].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-horizontal-content-width-container-with-metrics-dataframes-line-charts[webkit].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-horizontal-expander-dataframe-content-width-expander-opened[chromium].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-horizontal-expander-dataframe-content-width-expander-opened[firefox].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-horizontal-expander-dataframe-content-width-expander-opened[webkit].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-horizontal-expander-dataframe-content-width-large[chromium].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-horizontal-expander-dataframe-content-width-large[firefox].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-horizontal-expander-dataframe-content-width-large[webkit].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-horizontal-expander-dataframe-expander-opened[chromium].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-vertical-content-width-container-with-content-width-dataframes[chromium].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-vertical-content-width-container-with-content-width-dataframes[firefox].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-vertical-content-width-container-with-content-width-dataframes[webkit].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-vertical-content-width-container-with-stretch-width-dataframes[chromium].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-vertical-content-width-container-with-stretch-width-dataframes[firefox].png: Filename too long
+Updating files:  44% (4513/10256)
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-vertical-content-width-container-with-stretch-width-dataframes[webkit].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-vertical-content-width-container-with-various-elements[chromium].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-vertical-content-width-container-with-various-elements[firefox].png: Filename too long
+error: unable to create file e2e_playwright/__snapshots__/linux/st_layouts_container_various_elements_test/st_layouts_container_various_elements-layout-vertical-content-width-container-with-various-elements[webkit].png: Filename too long
+Updating files:  45% (4616/10256)
+Updating files:  46% (4718/10256)
+Updating files:  47% (4821/10256)
+Updating files:  48% (4923/10256)
+Updating files:  48% (4924/10256)
+Updating files:  49% (5026/10256)
+Updating files:  50% (5128/10256)
+Updating files:  51% (5231/10256)
+Updating files:  52% (5334/10256)
+Updating files:  53% (5436/10256)
+Updating files:  54% (5539/10256)
+Updating files:  55% (5641/10256)
+Updating files:  55% (5666/10256)
+Updating files:  56% (5744/10256)
+Updating files:  57% (5846/10256)
+Updating files:  58% (5949/10256)
+Updating files:  59% (6052/10256)
+Updating files:  60% (6154/10256)
+Updating files:  61% (6257/10256)
+Updating files:  62% (6359/10256)
+Updating files:  62% (6414/10256)
+Updating files:  63% (6462/10256)
+Updating files:  64% (6564/10256)
+Updating files:  65% (6667/10256)
+Updating files:  66% (6769/10256)
+Updating files:  67% (6872/10256)
+Updating files:  68% (6975/10256)
+Updating files:  69% (7077/10256)
+Updating files:  70% (7180/10256)
+Updating files:  71% (7282/10256)
+Updating files:  72% (7385/10256)
+Updating files:  73% (7487/10256)
+Updating files:  74% (7590/10256)
+Updating files:  75% (7692/10256)
+Updating files:  76% (7795/10256)
+Updating files:  77% (7898/10256)
+Updating files:  77% (7912/10256)
+Updating files:  78% (8000/10256)
+Updating files:  79% (8103/10256)
+Updating files:  80% (8205/10256)
+Updating files:  81% (8308/10256)
+Updating files:  82% (8410/10256)
+Updating files:  82% (8464/10256)
+Updating files:  83% (8513/10256)
+Updating files:  84% (8616/10256)
+Updating files:  85% (8718/10256)
+Updating files:  86% (8821/10256)
+Updating files:  87% (8923/10256)
+Updating files:  88% (9026/10256)
+Updating files:  89% (9128/10256)
+Updating files:  89% (9141/10256)
+Updating files:  90% (9231/10256)
+Updating files:  91% (9333/10256)
+Updating files:  92% (9436/10256)
+Updating files:  93% (9539/10256)
+Updating files:  94% (9641/10256)
+Updating files:  95% (9744/10256)
+Updating files:  95% (9808/10256)
+Updating files:  96% (9846/10256)
+Updating files:  97% (9949/10256)
+Updating files:  98% (10051/10256)
+Updating files:  99% (10154/10256)
+Updating files: 100% (10256/10256)
+Updating files: 100% (10256/10256), done.
+fatal: unable to checkout working tree
+warning: Clone succeeded, but checkout failed.
+You can inspect what was checked out with 'git status'
+and retry with 'git restore --source=HEAD :/'
+2026-11-11 19:37:45,061 [INFO] 
+============================================================
+2026-11-11 19:37:45,061 [INFO] [46/49] D03: Tushare 开放数据接口
+2026-11-11 19:37:45,061 [INFO]   类型: data_platform | URL: https://tushare.pro
+2026-11-11 19:37:45,061 [INFO]   📋 数据平台资源，已记录到手动清单
+2026-11-11 19:37:45,062 [INFO] 
+============================================================
+2026-11-11 19:37:45,062 [INFO] [47/49] D04: 国家统计局数据库
+2026-11-11 19:37:45,062 [INFO]   类型: data_platform | URL: https://data.stats.gov.cn
+2026-11-11 19:37:45,062 [INFO]   📋 数据平台资源，已记录到手动清单
+2026-11-11 19:37:45,062 [INFO] 
+============================================================
+2026-11-11 19:37:45,062 [INFO] [48/49] D05: 巨潮资讯网信息披露平台
+2026-11-11 19:37:45,062 [INFO]   类型: data_platform | URL: http://www.cninfo.com.cn
+2026-11-11 19:37:45,063 [INFO]   📋 数据平台资源，已记录到手动清单
+2026-11-11 19:37:45,063 [INFO] 
+============================================================
+2026-11-11 19:37:45,063 [INFO] [49/49] D06: 东方财富数据中心
+2026-11-11 19:37:45,063 [INFO]   类型: data_platform | URL: https://data.eastmoney.com
+2026-11-11 19:37:45,063 [INFO]   📋 数据平台资源，已记录到手动清单
+2026-11-11 19:37:45,065 [INFO] 
+📋 手动下载清单已保存: downloads\manual_download_list.md
+2026-11-11 19:37:45,065 [INFO] 
+============================================================
+2026-11-11 19:37:45,065 [INFO] 📊 下载统计摘要
+2026-11-11 19:37:45,065 [INFO] ============================================================
+2026-11-11 19:37:45,065 [INFO]   ✅ 成功: 9
+2026-11-11 19:37:45,065 [INFO]   ❌ 失败: 3
+2026-11-11 19:37:45,066 [INFO]   🔒 需手动: 37
+2026-11-11 19:37:45,066 [INFO]   ⏭️ 跳过: 0
+2026-11-11 19:37:45,066 [INFO]   📦 总计: 49
+2026-11-11 19:37:45,066 [INFO] ============================================================
+2026-11-11 19:37:45,066 [INFO] 
+✨ 任务完成！
