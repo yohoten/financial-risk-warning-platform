@@ -17,6 +17,7 @@ from xgboost import XGBClassifier
 from config import settings
 from config.feature_registry import TARGET_COLUMN
 from etl.io_utils import get_logger, read_table, resolve, write_table
+from models.calibration import load_calibrator
 from models.metrics import score_to_level
 
 logger = get_logger("predict")
@@ -50,7 +51,9 @@ def predict_frame(df: pd.DataFrame, features: list[str] | None = None) -> pd.Dat
 
     model = load_model()
     out = _normalize_code_column(df)
-    out["st_prob"] = model.predict_proba(out[features].astype(float))[:, 1]
+    raw_prob = model.predict_proba(out[features].astype(float))[:, 1]
+    out["st_prob_raw"] = raw_prob
+    out["st_prob"] = load_calibrator().apply(raw_prob)
     out["risk_level"] = out["st_prob"].map(score_to_level)
     out["risk_percentile"] = out["st_prob"].rank(pct=True).round(4)
     return out

@@ -2,9 +2,10 @@
 
 切分口径（与实施方案一致）
 --------------------------
-训练：2015-2022（用于拟合与交叉验证）
-验证：2023（用于阈值选择、早停与模型比较）
-测试：2024（只在最终评估时使用一次）
+训练：2015-2021（用于拟合与交叉验证）
+验证：2022（用于阈值选择、早停与模型比较）
+测试：2023（只在最终评估时使用一次）
+锁箱：2024（待 2026 官方 ST 标签披露后再评估，见 config.settings.LOCKBOX_YEAR）
 """
 
 from __future__ import annotations
@@ -97,6 +98,12 @@ def load_dataset(features: list[str] | None = None) -> Dataset:
         raise ValueError(
             f"时间切分后训练集({len(train)})或验证集({len(valid)})为空，"
             f"请检查数据年份覆盖（当前 {sorted(panel['year'].unique())}）"
+        )
+    if test.empty:
+        raise ValueError(
+            f"测试集({settings.TEST_YEAR})为空，无法做最终评估。"
+            f"若该年份 ST 标签尚未披露，应把其设为 LOCKBOX_YEAR（当前 "
+            f"{settings.LOCKBOX_YEAR}）而非 TEST_YEAR。"
         )
 
     ds = Dataset(train=train, valid=valid, test=test, features=features)

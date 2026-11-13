@@ -42,8 +42,16 @@ def expected_calibration_error(y_true: np.ndarray, y_prob: np.ndarray, bins: int
     return float(ece)
 
 
-def best_threshold(y_true: np.ndarray, y_prob: np.ndarray, method: str = "youden") -> float:
-    """确定分类阈值：默认 Youden's J，另有 f1 可选。"""
+def best_threshold(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+    method: str = "youden",
+    cost_fn: float | None = None,
+    cost_fp: float | None = None,
+) -> float:
+    """确定分类阈值：默认 Youden's J；另有 f1 / cost 可选。"""
+    if method == "cost":
+        return cost_optimal_threshold(y_true, y_prob, cost_fn=cost_fn, cost_fp=cost_fp)
     fpr, tpr, thresholds = roc_curve(y_true, y_prob)
     if method == "f1":
         scores = [f1_score(y_true, (y_prob >= t).astype(int), zero_division=0) for t in thresholds]
@@ -52,11 +60,91 @@ def best_threshold(y_true: np.ndarray, y_prob: np.ndarray, method: str = "youden
     return float(thresholds[int(np.argmax(j))])
 
 
+def cost_optimal_threshold(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+    cost_fn: float | None = None,
+    cost_fp: float | None = None,
+) -> float:
+    """最小化期望业务成本 ``FN*C_FN + FP*C_FP`` 的阈值。
+
+    只在验证集上调用；测试集只应用。阈值候选为验证集实际概率值，
+    并额外比较“全部拒绝”(t=1) 与“全部通过”(t=0) 两个极端。
+    """
+    y = np.asarray(y_true).astype(int).reshape(-1)
+    p = np.asarray(y_prob, dtype=float).reshape(-1)
+    if len(np.unique(y)) < 2:
+        return 0.5
+    c_fn = float(settings.COST_FN if cost_fn is None else cost_fn)
+    c_fp = float(settings.COST_FP if cost_fp is None else cost_fp)
+    total_pos = int(y.sum())
+    total_neg = int(len(y) - total_pos)
+
+    order = np.argsort(-p, kind="mergesort")
+    p_sorted, y_sorted = p[order], y[order]
+    tp = np.cumsum(y_sorted)
+    fp = np.cumsum(1 - y_sorted)
+    costs = (total_pos - tp) * c_fn + fp * c_fp
+
+    # 同分概率必须整体进入同一侧：只在每个唯一阈值的最后一个位置比较
+    last = np.r_[p_sorted[1:] != p_sorted[:-1], True]
+    candidate_idx = np.flatnonzero(last)
+    best_i = int(candidate_idx[np.argmin(costs[candidate_idx])])
+    best_cost = float(costs[best_i])
+    best_threshold_value = float(p_sorted[best_i])
+
+    # 全部拒绝 / 全部通过
+    if total_pos * c_fn < best_cost:
+        best_cost, best_threshold_value = float(total_pos * c_fn), 1.0
+    if total_neg * c_fp < best_cost:
+        best_threshold_value = 1.0
+    return float(np.clip(best_threshold_value, 0.0, 1.0))
+
+
+def top_k_metrics(
+    y_true: np.ndarray,
+    y_prob: np.ndarray,
+    fractions: tuple[float, ...] | None = None,
+) -> dict:
+    """按分数排序取前 k% 的复核名单指标。
+
+    返回 capture/recall、precision、lift 与名单最低分阈值；k 使用向上取整，
+    确保小样本年份至少复核 1 家。
+    """
+    y = np.asarray(y_true).astype(int).reshape(-1)
+    p = np.asarray(y_prob, dtype=float).reshape(-1)
+    n = len(y)
+    pos = int(y.sum())
+    base = pos / n if n else 0.0
+    order = np.argsort(-p, kind="mergesort")
+    out = {}
+    for frac in (fractions or settings.TOP_K_FRACTIONS):
+        k = max(1, int(np.ceil(n * float(frac)))) if n else 0
+        if k == 0:
+            continue
+        idx = order[:k]
+        tp = int(y[idx].sum())
+        precision = tp / k
+        recall = tp / pos if pos else 0.0
+        out[f"top_{int(round(float(frac) * 100))}pct"] = {
+            "fraction": round(float(frac), 4),
+            "n_reviewed": k,
+            "tp": tp,
+            "precision": round(float(precision), 4),
+            "recall": round(float(recall), 4),
+            "lift": round(float(precision / base), 4) if base else None,
+            "score_threshold": round(float(p[idx[-1]]), 4),
+        }
+    return out
+
+
 def evaluate_model(
     y_true: pd.Series | np.ndarray,
     y_prob: np.ndarray,
     threshold: float | None = None,
     name: str = "model",
+    cost_fn: float | None = None,
+    cost_fp: float | None = None,
 ) -> dict:
     """计算全套指标，返回可直接序列化为 JSON 的字典。"""
     y_true = np.asarray(y_true).astype(int)
@@ -64,6 +152,8 @@ def evaluate_model(
     thr = best_threshold(y_true, y_prob) if threshold is None else float(threshold)
     y_pred = (y_prob >= thr).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
+    c_fn = float(settings.COST_FN if cost_fn is None else cost_fn)
+    c_fp = float(settings.COST_FP if cost_fp is None else cost_fp)
 
     return {
         "model": name,
@@ -79,6 +169,11 @@ def evaluate_model(
         "ece": round(expected_calibration_error(y_true, y_prob), 4),
         "threshold": round(thr, 4),
         "tp": int(tp), "fp": int(fp), "tn": int(tn), "fn": int(fn),
+        "cost": round(float(fn * c_fn + fp * c_fp), 2),
+        "cost_per_sample": round(float(fn * c_fn + fp * c_fp) / max(len(y_true), 1), 4),
+        "cost_fn": c_fn,
+        "cost_fp": c_fp,
+        "top_k": top_k_metrics(y_true, y_prob),
     }
 
 

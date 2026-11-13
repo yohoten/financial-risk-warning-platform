@@ -5,8 +5,8 @@
 
 用法
 ----
-    python -m models.monitor                 # 基准=训练集，对比=测试集
-    python -m models.monitor --reference 2022 --current 2024
+    python -m models.monitor                 # 基准=2022 验证集，对比=2023 测试集
+    python -m models.monitor --reference 2022 --current 2023
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ import pandas as pd
 from config import settings
 from etl.io_utils import get_logger, read_table, resolve
 from etl.stats_utils import psi_table
+from models.calibration import cross_fitted_probabilities, load_calibrator
 from models.data import load_dataset
 from models.metrics import evaluate_model, load_thresholds
 from models.predict import load_model
@@ -45,13 +46,19 @@ def performance_drift() -> dict:
     """在标注可得的最近年份上重算指标，与训练期指标比较。"""
     ds = load_dataset()
     model = load_model()
+    calibrator = load_calibrator()
     threshold = float(load_thresholds()["value"])
     result = {"reference": {}, "current": {}}
 
     for label, X, y in (("valid", ds.X_valid, ds.y_valid), ("test", ds.X_test, ds.y_test)):
         if len(X) == 0:
             continue
-        prob = model.predict_proba(X)[:, 1]
+        raw_prob = model.predict_proba(X)[:, 1]
+        prob = calibrator.apply(raw_prob)
+        if label == "valid":
+            prob = cross_fitted_probabilities(
+                y, raw_prob, method=settings.CALIBRATION_METHOD
+            )
         m = evaluate_model(y, prob, threshold=threshold, name=label)
         result["reference" if label == "valid" else "current"] = m
 
@@ -61,7 +68,7 @@ def performance_drift() -> dict:
     return result
 
 
-def build_report(reference_year: int = 2022, current_year: int = settings.TEST_YEAR) -> dict:
+def build_report(reference_year: int = settings.VALID_YEAR, current_year: int = settings.TEST_YEAR) -> dict:
     """生成监控报告：漂移明细 + 性能变化 + 处置建议。"""
     drift = feature_drift(reference_year, current_year)
     perf = performance_drift()
@@ -102,7 +109,7 @@ def build_report(reference_year: int = 2022, current_year: int = settings.TEST_Y
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="模型漂移监控")
-    parser.add_argument("--reference", type=int, default=2022, help="基准年份")
+    parser.add_argument("--reference", type=int, default=settings.VALID_YEAR, help="基准年份")
     parser.add_argument("--current", type=int, default=settings.TEST_YEAR, help="对比年份")
     args = parser.parse_args()
     build_report(args.reference, args.current)
