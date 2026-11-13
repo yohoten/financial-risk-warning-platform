@@ -30,7 +30,7 @@ cache/*
 !cache/.gitkeep
 reports/*
 !reports/.gitkeep
-docs/downloads/
+docs/downloads/repos/
 downloads/
 CSMAR_download/
 
