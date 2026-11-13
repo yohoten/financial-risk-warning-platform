@@ -7,7 +7,7 @@
 3. 数值健康度：inf、缺失率、资产=负债+权益、流动资产与存货关系、资不抵债比例；
 4. 标签口径：is_st ∈ {0,1}、正样本率是否落在合理区间；
 5. 跨表覆盖：治理/文本/市场/司法与财务主表的主键覆盖率，标签对建模窗口的覆盖；
-6. 年份覆盖：2015-2024 建模窗口是否齐全。
+6. 年份覆盖：2015-2023 建模窗口与 2024 锁箱年份是否齐全。
 
 输出
 ----
@@ -434,7 +434,7 @@ def _markdown(report: dict) -> str:
     if "accounting_identity" in codes or "liabilities_over_assets" in codes:
         advice.append("核对报表口径与单位（元/万元/亿元）、是否合并报表、少数股东权益是否计入。")
     if "key_coverage" in codes or "label_coverage" in codes:
-        advice.append("检查跨表主键格式与年份范围；标签需覆盖 2015-2024 建模窗口。")
+        advice.append("检查跨表主键格式与年份范围；标签需覆盖 2015-2023 建模窗口（2024 锁箱待 2026 标签）。")
     if "missing_rate" in codes:
         advice.append("高缺失字段需说明缺失机制；必要时在特征筛选中剔除或改用行业-年度中位数。")
     if not advice:
