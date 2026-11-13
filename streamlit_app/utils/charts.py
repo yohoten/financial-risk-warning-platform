@@ -268,22 +268,29 @@ def interaction_heatmap(pairs: pd.DataFrame, top_n: int = 8) -> go.Figure:
 
 
 def metric_compare(metrics: dict) -> go.Figure:
-    """五模型 AUC/KS/F1/Brier 对比。"""
+    """五模型 PR-AUC / Recall@Top10 / AUC 对比（主指标优先）。"""
     rows = []
     for name, m in metrics.items():
         if not isinstance(m, dict) or "auc" not in m:
             continue
-        rows.append({"model": name, "AUC": m.get("auc"), "KS": m.get("ks"), "F1": m.get("f1")})
+        top10 = (m.get("top_k") or {}).get("top_10pct", {}).get("recall")
+        rows.append({
+            "model": name, "PR-AUC": m.get("pr_auc"), "Recall@Top10": top10,
+            "AUC": m.get("auc"),
+        })
     df = pd.DataFrame(rows)
     if df.empty:
         return _layout(go.Figure(), "暂无模型指标", 300)
 
     fig = go.Figure()
-    for metric, color in (("AUC", BLUE), ("KS", ORANGE), ("F1", GREEN)):
-        fig.add_bar(x=df["model"], y=df[metric], name=metric, marker_color=color,
-                    text=[f"{v:.3f}" for v in df[metric]], textposition="outside")
+    for metric, color in (("PR-AUC", GREEN), ("Recall@Top10", ORANGE), ("AUC", BLUE)):
+        fig.add_bar(
+            x=df["model"], y=df[metric], name=metric, marker_color=color,
+            text=["-" if pd.isna(v) else f"{v:.3f}" for v in df[metric]],
+            textposition="outside",
+        )
     fig.update_layout(barmode="group", yaxis=dict(range=[0, 1.05], title="指标值"))
-    return _layout(fig, "五模型对比（验证集 2023）", 380)
+    return _layout(fig, "五模型对比（验证集，主指标 PR-AUC）", 380)
 
 
 def calibration_scatter(calib: pd.DataFrame) -> go.Figure:

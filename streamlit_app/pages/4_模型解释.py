@@ -94,22 +94,25 @@ with tab4:
         if not isinstance(m, dict) or "auc" not in m:
             continue
         rows.append({
-            "模型": name, "AUC": m.get("auc"), "KS": m.get("ks"), "F1": m.get("f1"),
-            "Brier": m.get("brier"), "CV-AUC均值": m.get("cv_auc_mean"), "CV-AUC标准差": m.get("cv_auc_std"),
+            "模型": name, "AUC": m.get("auc"), "PR-AUC": m.get("pr_auc"),
+            "KS": m.get("ks"), "F1": m.get("f1"), "ECE": m.get("ece"),
+            "Brier": m.get("brier"), "CV-AUC均值": m.get("cv_auc_mean"),
+            "CV-AUC标准差": m.get("cv_auc_std"),
         })
     if rows:
-        df = pd.DataFrame(rows).sort_values("AUC", ascending=False)
+        df = pd.DataFrame(rows).sort_values("PR-AUC", ascending=False)
         st.dataframe(df, use_container_width=True, hide_index=True)
+        st.caption("主指标为 PR-AUC、Recall@Top10% 与 ECE；AUC/KS/F1 仅作辅助。")
 
     eval_metrics = D.load_evaluation()
     if eval_metrics:
         c1, c2 = st.columns(2)
         with c1:
-            st.markdown("**验证集（2023）**")
-            st.json(eval_metrics.get("valid_2023", {}))
+            st.markdown(f"**验证集（{settings.VALID_YEAR}）**")
+            st.json(eval_metrics.get(f"valid_{settings.VALID_YEAR}", {}))
         with c2:
-            st.markdown("**测试集（2024）**")
-            st.json(eval_metrics.get("test_2024") or {"提示": "测试集未生成"})
+            st.markdown(f"**测试集（{settings.TEST_YEAR}）**")
+            st.json(eval_metrics.get(f"test_{settings.TEST_YEAR}") or {"提示": "测试集未生成"})
 
     calib_path = settings.ARTIFACT_DIR / "calibration_curve.csv"
     if calib_path.exists():
@@ -128,7 +131,8 @@ with tab5:
 
         perf = monitor.get("performance", {})
         st.markdown("**性能对比**")
-        st.json({"基准（2023 验证）": perf.get("reference"), "当前（2024 测试）": perf.get("current"),
+        st.json({f"基准（{settings.VALID_YEAR} 验证）": perf.get("reference"),
+                 f"当前（{settings.TEST_YEAR} 测试）": perf.get("current"),
                  "AUC 变化": perf.get("delta_auc")})
 
         psi_path = settings.ARTIFACT_DIR / "psi_detail.csv"

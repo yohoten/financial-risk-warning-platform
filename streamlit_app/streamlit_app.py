@@ -55,8 +55,10 @@ metrics = D.load_metrics()
 valid = metrics.get("XGBoost(tuned)") or metrics.get("XGBoost") or {}
 col1.metric("样本规模", f"{len(D.load_panel()):,}", help="公司-年 观测值")
 col2.metric("特征维度", f"{len(FEATURES)} 维", help="覆盖 9 大维度")
-col3.metric("验证集 AUC", f"{valid.get('auc', float('nan')):.3f}", help="2023 年时间外验证")
-col4.metric("验证集 KS", f"{valid.get('ks', float('nan')):.3f}", help="行业标准 ≥0.40")
+col3.metric("验证集 PR-AUC", f"{valid.get('pr_auc', float('nan')):.3f}", help=f"{settings.VALID_YEAR} 年时间外验证；主指标")
+test = valid.get(f"test_{settings.TEST_YEAR}", {}) or {}
+test_top10 = (test.get("top_k") or {}).get("top_10pct", {}).get("recall")
+col4.metric("测试集 Recall@Top10", f"{test_top10:.3f}" if test_top10 is not None else "—", help=f"{settings.TEST_YEAR} 年留出测试；按分数复核前 10% 的召回率")
 
 st.markdown("---")
 st.subheader("🧭 五大功能模块")
@@ -132,7 +134,7 @@ with c1:
     st.caption("T 年被实施 ST/*ST 为正样本，特征取 T-2 年，规避前视偏差（Look-ahead Bias）。")
 with c2:
     st.markdown("**验证策略**")
-    st.caption("5 折 TimeSeriesSplit + 2023 年 OOT 验证 + 2024 年留出测试，随机切分被严格禁止。")
+    st.caption("按年分组扩展窗口 CV + 2022 年 OOT 验证 + 2023 年留出测试（2024 锁箱），随机切分被严格禁止。")
 with c3:
     st.markdown("**可解释性**")
     st.caption("TreeSHAP 四维度：全局重要性、单样本归因、依赖效应、交互效应。")

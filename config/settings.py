@@ -61,10 +61,29 @@ MONITOR_REPORT = ARTIFACT_DIR / "monitor_report.json"
 # ---------------------------------------------------------------------------
 RANDOM_SEED = 42
 CV_SPLITS = 5
-TRAIN_YEAR_RANGE = (2015, 2022)
-VALID_YEAR = 2023
-TEST_YEAR = 2024
+TRAIN_YEAR_RANGE = (2015, 2021)
+VALID_YEAR = 2022
+TEST_YEAR = 2023
+# 锁箱年份：待 2026 官方 ST 标签披露后再评估，不调参、不重选阈值（见中期报告 §4.4）
+LOCKBOX_YEAR = 2024
 PANEL_YEARS = tuple(range(TRAIN_YEAR_RANGE[0], TEST_YEAR + 1))
+
+# 领域先验：二值 IV 修复后，审计意见必须进入候选/最终模型。
+# 该特征在 IV 步通过后强制保留，避免 RF 重要性分位把它误删。
+FORCE_FEATURES = ("audit_opinion",)
+
+# 概率校准：在验证集拟合，测试集只应用；默认等渗回归（小样本可用 Platt 回退）。
+CALIBRATION_METHOD = "isotonic"
+CALIBRATOR_PATH = ARTIFACT_DIR / "calibrator.pkl"
+
+# 成本敏感阈值：漏报一个 ST 的成本 / 误报一个正常企业的成本。
+# 10:1 是中期默认值，论文中应做 5:1、10:1、20:1 敏感性。
+COST_FN = 10.0
+COST_FP = 1.0
+
+# Top-k 复核容量：按分数排序取前 5%/10% 作为人工复核名单。
+TOP_K_FRACTIONS = (0.05, 0.10)
+TOP_K_PRIMARY = 0.10
 
 # 标签定义：使用 T-2 年财务数据预测 T 年 ST 状态，规避前视偏差
 LABEL_HORIZON = 2

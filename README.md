@@ -7,7 +7,7 @@
 [![Streamlit](https://img.shields.io/badge/streamlit-1.29-FF4B4B.svg)](https://streamlit.io/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-2.0-green.svg)](https://xgboost.readthedocs.io/)
 [![SHAP](https://img.shields.io/badge/SHAP-0.45-orange.svg)](https://shap.readthedocs.io/)
-[![Tests](https://img.shields.io/badge/tests-49%20passed-brightgreen.svg)](./tests)
+[![Tests](https://img.shields.io/badge/tests-61%20passed-brightgreen.svg)](./tests)
 
 ---
 
@@ -22,7 +22,7 @@
 | 决策 | 做法 | 为什么 |
 |------|------|--------|
 | 防前视偏差 | T 年 ST 标签 ↔ T-2 年特征 | ST 判定依据 T-1 年年报，年报于 T 年 4 月才披露，用 T 年特征会泄露未来信息 |
-| 防过拟合 | TimeSeriesSplit + 2023 OOT + 2024 留出测试 | 财务数据强时序依赖，随机 K 折会让模型"看到未来" |
+| 防过拟合 | 按年分组扩展窗口 CV + 2022 OOT + 2023 留出测试（2024 锁箱） | 财务数据强时序依赖，随机 K 折会让模型“看到未来”；2024 标签尚未披露，不能伪报测试指标 |
 | 防口径漂移 | 特征元数据集中在 `config/feature_registry.py` | ETL、模型、前端、文档同源，避免"代码一套、论文一套" |
 
 ---
@@ -36,7 +36,7 @@
 | 📋 **批量预警** | 粘贴代码 / 上传 CSV、阈值实时调节、风险等级分布、Excel/CSV 一键导出 |
 | 🔍 **模型解释** | 全局重要性（特征 + 维度双视角）、依赖效应、交互强度、五模型对比、校准曲线、PSI 漂移监控 |
 | 📄 **报告导出** | 单企业 PDF 诊断报告（内置中文字体，无外部依赖）、批量 Excel（含汇总 Sheet）、评估报告、数据字典 |
-| ⚙️ **工程能力** | 一键 Docker 部署、49 项单元测试、四步特征筛选证据链、模型元信息与运行清单留痕（数据/特征 hash、参数、阈值） |
+| ⚙️ **工程能力** | 一键 Docker 部署、61 项单元测试、四步特征筛选证据链、概率校准与成本阈值、模型元信息与运行清单留痕（数据/特征 hash、参数、阈值） |
 
 ---
 
@@ -68,7 +68,7 @@ streamlit run streamlit_app/app.py
 ```bash
 make all      # data → pipeline → train → evaluate → shap
 make app      # 启动平台
-make test     # 49 项单元测试
+make test     # 61 项单元测试
 ```
 
 ### 方式二：接入真实数据（CSMAR 原始分表）
@@ -93,7 +93,7 @@ python -m etl.mapping --source D:\csmar\export --write
 **当前真实数据状态（2026-11-11）**：财务/治理/审计三块已接入（52,203 个公司-年，2013–2025），
 52/73 维特征有真实数值。CSMAR 账号暂未开通《特别处理变动文件》库权限（检索得到、进入显示“暂无数据”），
 已用基本信息表历年证券简称生成**ST 代理标签**（48,290 个 A 股公司-年，正样本 2.80%），
-训练/验证链路已跑通（2015–2023，28 维筛选特征）；**2024 测试集仍需 2026 年官方 ST 事件**。
+训练/验证链路已跑通：按年扩展窗口训练 2015–2021、2022 年验证、**2023 年留出测试**（2024 锁箱，待 2026 官方 ST 标签披露后再评估）；当前 28 维筛选特征已纳入 `audit_opinion`。
 口径、代理标签局限与下载指引见 [`docs/CSMAR数据可行性报告.md`](./docs/CSMAR数据可行性报告.md)。
 
 ### 方式三：Docker 部署（答辩/交付推荐）
@@ -213,9 +213,9 @@ financial-risk-warning-platform/
 │   ├── feature_selection.py      #   四步筛选 + 证据链报告
 │   └── run_pipeline.py           #   流水线编排（一条命令跑通数据层）
 ├── models/                       # 🤖 模型
-│   ├── data.py                   #   时间切分（2015-22 / 2023 / 2024）
+│   ├── data.py                   #   时间切分（2015-21 / 2022 / 2023；2024 锁箱）
 │   ├── metrics.py                #   AUC/KS/F1/Brier/ECE + 阈值选择 + 分群
-│   ├── train.py                   #   五模型 + TimeSeriesSplit + Optuna
+│   ├── train.py                   #   五模型 + 按年扩展窗口 CV + 校准 + Optuna
 │   ├── evaluate.py               #   评估报告（Markdown/CSV/JSON）
 │   ├── predict.py                #   推理服务（批量/单企业/缓存）
 │   ├── shap_analysis.py          #   SHAP 四维度 + 缓存
@@ -244,12 +244,13 @@ financial-risk-warning-platform/
 ├── scripts/gen_data_dictionary.py # 🔁 文档自动生成
 ├── scripts/convert_csmar_xlsx.py  # 🔁 现金流量表 XLSX 流式转 CSV
 ├── scripts/validate_raw_data.py   # ✅ 原始数据质量校验（结构/主键/标签/覆盖）
-├── tests/                        # ✅ 49 项单元测试
+├── tests/                        # ✅ 61 项单元测试
 │   ├── conftest.py               #   内存面板夹具（不写盘、不依赖模型）
 │   ├── test_feature_registry.py  #   特征口径一致性
 │   ├── test_feature_engineering.py
 │   ├── test_stats_utils.py       #   IV/PSI/VIF/KS 数学正确性
 │   ├── test_metrics.py
+│   ├── test_calibration.py       #   等渗/Platt 回退/交叉拟合
 │   └── test_io_and_pipeline.py
 ├── docker/entrypoint.sh          # 容器启动自检（缺数据/模型自动补齐）
 ├── Dockerfile  docker-compose.yml
@@ -274,7 +275,7 @@ financial-risk-warning-platform/
 ### 样本范围
 
 - **行业**：沪深 A 股制造业（证监会 C 类），剔除金融（J）、房地产（K）、综合（S）
-- **窗口**：训练 2015-2022，验证 2023（OOT），测试 2024（仅最终评估）
+- **窗口**：训练 2015-2021，验证 2022（OOT），测试 2023（仅最终评估一次），2024 锁箱
 - **标签**：T 年被实施 ST/*ST 为正样本，特征取 T-2 年
 - **配对**：1:3 近邻匹配（行业 + 年份 + 总资产对数），稳健性检验使用 1:5 与全样本
 
@@ -321,20 +322,21 @@ financial-risk-warning-platform/
 
 | 指标 | 合格线 | 优秀线 | 说明 |
 |------|-------|-------|------|
-| AUC-ROC | ≥ 0.85 | ≥ 0.90 | 阈值无关的综合判别力 |
-| KS | ≥ 0.40 | ≥ 0.50 | 金融风控行业标准 |
-| F1 | ≥ 0.60 | ≥ 0.75 | 不平衡场景下的主指标 |
+| PR-AUC | ≥ 0.20 | ≥ 0.30 | 主指标；不平衡场景下比 AUC 更能反映高风险识别力 |
+| Recall@Top10 | ≥ 0.50 | ≥ 0.65 | 主指标；按分数复核前 10% 名单的召回率 |
+| ECE | ≤ 0.05 | ≤ 0.02 | 主指标；校准后概率与真实 ST 频率的分箱误差 |
+| AUC-ROC | ≥ 0.85 | ≥ 0.90 | 辅助判别力；不能当作准确率 |
+| KS | ≥ 0.40 | ≥ 0.50 | 辅助排序指标 |
 | Brier | ≤ 0.15 | ≤ 0.10 | 概率校准质量 |
-| ECE | ≤ 0.05 | ≤ 0.02 | 分箱校准误差 |
 
-> 演示数据（240 家公司 × 10 年）上的实测结果见 `models/artifacts/evaluation_report.md`，
-> 五模型验证 AUC 约 0.82-0.87、KS 约 0.50-0.59。**真实数据结果以本地复现为准**。
+> 真实数据（代理 ST 标签）的 2023 留出测试：PR-AUC 0.292、Recall@Top10 66.46%、ECE 0.0088、AUC 0.872；
+> 完整表格与成本敏感性见 `models/artifacts/evaluation_report.md`。**代理标签结果不能替代官方 ST 表复核。**
 
 ### 验证策略
 
 ```
-Level 1  5 折 TimeSeriesSplit（前向滚动，训练集始终早于测试集）
-Level 2  OOT：训练 2015-2022 → 验证 2023 → 测试 2024
+Level 1  按年分组扩展窗口 CV（5 折，训练年份严格早于测试年份）
+Level 2  OOT：训练 2015-2021 → 验证 2022 → 测试 2023；2024 锁箱
 Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比例 / 安慰剂检验
 ```
 
@@ -368,7 +370,7 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | 5. 解释 | `python -m models.shap_analysis` | `shap_values.pkl` |
 | 6. 监控 | `python -m models.monitor` | `monitor_report.json`、`psi_detail.csv` |
 | 7. 平台 | `streamlit run streamlit_app/app.py` | 五大模块可交互 |
-| 8. 测试 | `python -m pytest -q` | 49 passed |
+| 8. 测试 | `python -m pytest -q` | 61 passed |
 
 ---
 
@@ -424,7 +426,7 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | 模型训练与评估 | ✅ | 五模型对比、Optuna、OOT 评估、分群一致性 |
 | SHAP 可解释性 | ✅ | 四维度分析 + 缓存 + Plotly 可视化 |
 | Streamlit 平台 | ✅ | 五大模块 + 报告导出 |
-| 工程化 | ✅ | 49 项测试、Docker、Makefile、文档自动生成 |
+| 工程化 | ✅ | 61 项测试、Docker、Makefile、文档自动生成 |
 | 待办 | ⬜ | 文本情感增量价值分组检验、在线增量更新、模型注册表（MLflow） |
 
 ---

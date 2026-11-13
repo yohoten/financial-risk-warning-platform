@@ -13,6 +13,7 @@ from etl.stats_utils import (
     drop_high_corr,
     ks_statistic,
     psi_table,
+    quantile_bins,
 )
 
 
@@ -50,6 +51,24 @@ def test_iv_of_noise_is_near_zero():
     x = pd.DataFrame({"noise": rng.normal(size=4000)})
     y = pd.Series(rng.integers(0, 2, 4000))
     assert calculate_iv(x, y).iloc[0]["iv"] < 0.03
+
+
+def test_quantile_bins_binary_yields_two_bins():
+    """二值特征不得退化为单箱（否则 IV/PSI 恒为 0）。"""
+    s = pd.Series([0, 1, 0, 1, 0, 1])
+    bp = quantile_bins(s, buckets=10)
+    assert len(bp) == 3
+    assert bp[1] == 0.5
+
+
+def test_binary_feature_iv_is_not_zero():
+    """二值强预测特征经分箱后 IV 应显著大于 0（回归：审计意见被误删）。"""
+    rng = np.random.default_rng(5)
+    n = 2000
+    feature = pd.Series(np.concatenate([np.zeros(n), np.ones(n)]))
+    target = pd.Series(np.concatenate([rng.binomial(1, 0.02, n), rng.binomial(1, 0.40, n)]))
+    table = calculate_iv(feature.to_frame("binary"), target)
+    assert table.iloc[0]["iv"] > 0.1
 
 
 def test_vif_of_independent_features_is_low():
