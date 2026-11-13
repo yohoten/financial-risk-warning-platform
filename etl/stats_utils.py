@@ -16,10 +16,21 @@ EPS = 1e-6
 # 分箱
 # ---------------------------------------------------------------------------
 def quantile_bins(expected: pd.Series, buckets: int = 10) -> np.ndarray:
-    """基于参考样本的分位点切分，返回单调递增的边界数组。"""
+    """基于参考样本的分位点切分，返回单调递增的边界数组。
+
+    低基数特征（唯一值个数 ≤ buckets）按唯一值中点切分：对 0/1 二值特征等价于
+    [−∞, 0.5, +∞] 两箱。否则 `np.quantile` 会把二值特征压成 [0,1] 再展开为单箱，
+    导致 IV/PSI 恒为 0，审计意见等二值特征被误删（见中期可行性报告 §4.5）。
+    """
     values = expected.dropna().to_numpy()
+    uniq = np.unique(values)
+    if len(uniq) <= buckets:
+        if len(uniq) < 2:  # 常量特征：无判别力，单箱
+            return np.array([-np.inf, np.inf])
+        midpoints = (uniq[:-1] + uniq[1:]) / 2
+        return np.concatenate(([-np.inf], midpoints, [np.inf]))
     breakpoints = np.unique(np.quantile(values, np.linspace(0, 1, buckets + 1)))
-    if len(breakpoints) < 2:  # 常量特征
+    if len(breakpoints) < 2:  # 常量特征（理论不可达，兜底）
         breakpoints = np.array([values.min() - EPS, values.max() + EPS])
     breakpoints[0], breakpoints[-1] = -np.inf, np.inf
     return breakpoints

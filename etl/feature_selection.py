@@ -2,9 +2,10 @@
 
 设计要点
 --------
-1. 全部统计量只在**训练集**（2015-2022）上估计，验证/测试集只做变换；
+1. 全部统计量只在**训练集**（settings.TRAIN_YEAR_RANGE）上估计，验证/测试集只做变换；
 2. 每一步的结果写入报告 CSV，形成可复现的筛选证据链（答辩可直接展示）；
-3. Boruta 为可选依赖，缺失时自动降级为"随机森林置换重要性"，保证链路不断。
+3. Boruta 为可选依赖，缺失时自动降级为"随机森林置换重要性"，保证链路不断；
+4. 领域先验特征（settings.FORCE_FEATURES）在 IV 通过后强制保留，避免重要性分位误删。
 """
 
 from __future__ import annotations
@@ -123,12 +124,19 @@ def select_features(panel: pd.DataFrame, write: bool = True) -> list[str]:
         f4 = f3
         logger.warning("Boruta 保留特征少于 %d 维，回退到 PSI 步骤结果", settings.MIN_FEATURES)
 
+    # 领域先验：只对通过 IV 的特征强制保留（审计意见当前 IV≈1.77）。
+    forced = [f for f in settings.FORCE_FEATURES if f in f1 and f not in f4]
+    if forced:
+        f4 = f4 + forced
+        logger.info("按领域先验强制保留：%s", ", ".join(forced))
+
     # 合并报告
     report = (
         corr_report.rename(columns={"dropped_by_corr": "drop_corr"})
         .merge(psi_report[["feature", "psi", "dropped"]].rename(columns={"dropped": "drop_psi"}), on="feature", how="left")
         .merge(boruta_report.rename(columns={"selected": "keep_boruta"}), on="feature", how="left")
     )
+    report["forced"] = report["feature"].isin(forced)
     report["final_keep"] = report["feature"].isin(f4)
     chain = [available, f1, f2, f3, f4]
     logger.info("筛选链路维度：%s", " → ".join(str(len(x)) for x in chain))
@@ -143,6 +151,7 @@ def select_features(panel: pd.DataFrame, write: bool = True) -> list[str]:
                     "n_features": len(f4),
                     "selection_chain": {"raw": len(available), "iv": len(f1), "collinearity": len(f2), "psi": len(f3), "boruta": len(f4)},
                     "boruta_method": boruta_report.attrs.get("method", "Boruta"),
+                    "forced_features": forced,
                     "train_years": list(settings.TRAIN_YEAR_RANGE),
                 },
                 ensure_ascii=False,
