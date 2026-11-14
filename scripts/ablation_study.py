@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-"""消融研究：财务-only → +治理 → +审计 → 全量，逐步累加特征维度。
+"""消融研究：财务-only → +治理 → +审计 → +数字化 → +宏观/行业 → 全量，逐步累加特征维度。
 
-复现中期报告 §0.4 的「财务-only vs +治理 vs +审计」消融表。
+复现中期报告 §0.4 的「财务-only vs +治理 vs +审计」消融表，并量化数字化转型特征
+（CSMAR 数字化转型库，词频 log(1+x)）的边际增量。
 训练 2015—2021，一次性在测试集 2023 上评估（不调参、不重选阈值），
 报告 AUC / PR-AUC / KS / Recall@Top10，形成可辩护的增量证据。
 
@@ -17,7 +18,7 @@ import pandas as pd
 from xgboost import XGBClassifier
 
 from config import settings
-from config.feature_registry import group_of
+from config.feature_registry import by_group, group_of
 from etl.io_utils import get_logger, write_table
 from models.metrics import ks_statistic
 
@@ -47,19 +48,48 @@ def main() -> None:
     selected = json.loads(settings.FEATURE_LIST.read_text(encoding="utf-8"))["features"]
     selected = [f for f in selected if f in panel.columns]
 
+    # 年行情块（TRD_Year）只做消融，不进入 feature_registry / 生产特征清单
+    annual_path = settings.RAW_DIR / "candidates" / "market_annual.csv"
+    extra_annual: list[str] = []
+    if annual_path.exists():
+        annual = pd.read_csv(annual_path, dtype={"stock_code": str}, encoding="utf-8-sig")
+        annual["stock_code"] = annual["stock_code"].str.zfill(6)
+        panel = panel.merge(annual, on=["stock_code", "year"], how="left", validate="one_to_one")
+        extra_annual = [c for c in ("annual_return", "ln_mktcap", "trading_days")
+                        if c in panel.columns]
+        logger.info("年行情块已载入（%s）：%s", settings.rel(annual_path), extra_annual)
+
     groups = group_of(selected)
     financial = [f for f in selected if groups[f] in FINANCIAL_GROUPS]
     governance = [f for f in selected if groups[f] == "governance"]
     audit = [f for f in selected if groups[f] == "audit_market_legal"]
     macro = [f for f in selected if groups[f] == "macro_industry"]
+    digital = [f for f in selected if groups[f] == "digital"]
+    text = [f for f in selected if groups[f] == "text"]
+    # 文本/数字化块诊断：即使四步筛选未保留，也在全量模型上追加完整特征块，
+    # 单独量化其边际增量（避免「未入选 → 增量恒为 0」的误导）。
+    digital_all = [f.key for f in by_group("digital") if f.key in panel.columns]
+    text_all = [f.key for f in by_group("text") if f.key in panel.columns]
+    remaining4 = [f for f in ("lt_debt_to_ebitda", "ebitda_margin", "capex_to_depreciation",
+                              "social_financing_growth") if f in panel.columns]
 
     variants = [
         ("财务-only", financial),
         ("+治理", financial + governance),
         ("+审计", financial + governance + audit),
-        ("+宏观/行业", financial + governance + audit + macro),
+        ("+文本", financial + governance + audit + text),
+        ("+数字化", financial + governance + audit + text + digital),
+        ("+宏观/行业", financial + governance + audit + text + digital + macro),
         ("全量", selected),
+        ("全量+文本块", selected + [f for f in text_all if f not in selected]),
+        ("全量+数字化块", selected + [f for f in digital_all if f not in selected]),
+        ("全量+折旧/社融块", selected + [f for f in remaining4 if f not in selected]),
     ]
+    if extra_annual:
+        variants += [
+            ("财务+年行情", financial + extra_annual),
+            ("全量+年行情块", selected + extra_annual),
+        ]
 
     tr = panel[panel["year"].between(*settings.TRAIN_YEAR_RANGE)]
     te = panel[panel["year"] == settings.TEST_YEAR]

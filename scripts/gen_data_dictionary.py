@@ -39,12 +39,13 @@ FOOTER = """
 | 项 | 定义 |
 |----|------|
 | 标签字段 | `{target}` |
-| 正样本 | T 年被实施 ST 或 *ST 的上市公司 |
+| 标签来源 | CSMAR `SPT_Trdchg` 官方特殊处理事件区间，不使用年末简称代理 |
+| 正样本 | T 年任意时点处于 ST/*ST 状态的制造业 A 股公司（状态口径，非仅首次 ST） |
 | 特征时点 | T-{horizon} 年财务与文本数据（避免前视偏差） |
 | 训练窗口 | {train_start}-{train_end} 年 |
 | 验证窗口 | {valid} 年（时间序列外验证，OOT） |
 | 测试窗口 | {test} 年（仅用于最终评估，不参与调优） |
-| 行业范围 | 沪深 A 股制造业（证监会 C 类），剔除金融、房地产、综合 |
+| 行业范围 | 沪深 A 股制造业（证监会行业门类 C），样本在特征工程阶段统一过滤 |
 
 ## 六、缺失值与异常值处理规则
 
@@ -52,8 +53,8 @@ FOOTER = """
 |------|------|------|
 | 去重 | 按 `stock_code + year` 保留最后一条 | 后写入视为数据更新 |
 | 缺失插补 | 公司内线性插值（≤2 期）→ 行业-年度中位数 → 全局中位数 | 保留时间连续性，避免跨公司信息污染 |
-| 文本缺失 | 情感极性置 0（中性） | 「未披露」不等于「极度悲观」 |
-| 异常值 | 按 1%/99% 分位缩尾 | 抑制极端值对树模型分裂点的影响 |
+| 文本缺失 | 情感分值保留缺失，不按 0（中性）处理 | 「未披露」不等于「中性」或「悲观」 |
+| 异常值 | 仅用训练窗口估计 1%/99% 分位，再裁剪全样本 | 抑制极端值，同时避免验证/测试集信息泄露 |
 | 样本剔除 | 关键科目缺失、总资产≤0、覆盖率<70% | 插补可靠性不足的样本不进入建模 |
 | 比率计算 | 分母为 0 或缺失时返回 NaN | 避免 inf 污染特征 |
 
@@ -64,7 +65,7 @@ FOOTER = """
 | Step 1 | IV 值（Information Value） | IV ≥ 0.02 | 剔除无预测力特征 |
 | Step 2 | Pearson 相关 + VIF | \\|r\\| ≤ 0.85，VIF ≤ 10 | 去除共线性冗余 |
 | Step 3 | PSI（跨期稳定性） | PSI ≤ 0.25 | 剔除分布不稳定的特征 |
-| Step 4 | Boruta / RF 重要性 | 保留重要特征 | 最终确认，输出 35-50 维 |
+| Step 4 | Boruta / RF 重要性 | 保留重要特征 | 最终确认，输出约 35 维 |
 
 > 筛选统计量仅在训练窗口内估计，验证集与测试集只做变换，不参与任何选择决策。
 """
@@ -99,9 +100,9 @@ def build_markdown() -> str:
         "| 财务主表 | `data/raw/csmar_financial.csv` | stock_code + year | 30+ 报表科目（金额单位：亿元）|\n"
         "| 治理表 | `data/raw/csmar_governance.csv` | stock_code + year | top1_holding, board_size, independent_directors, duality, big4_audit |\n"
         "| 文本情感 | `data/raw/text_sentiment.csv` | stock_code + year | mdna_positive, mdna_negative, mdna_uncertainty, sentiment_polarity |\n"
-        "| 市场特征 | `data/raw/market_features.csv` | stock_code + year | annual_turnover, stock_volatility |\n"
-        "| 司法事件 | `data/raw/legal_events.csv` | stock_code + year | litigation_count, penalty_count |\n"
-        "| ST 标签 | `data/raw/labels_st.csv` | stock_code + year | is_st |\n"
+        "| 市场特征 | `data/raw/market_features_trd.csv` | stock_code + year | annual_turnover（小数换手率）, stock_volatility, market_available |\n"
+        "| 司法事件 | `data/raw/legal_events.csv` | stock_code + year | litigation_count（首次公告年distinct EventID）, penalty_count（处置年）, legal_available |\n"
+        "| ST 标签 | `data/raw/labels_st.csv` | stock_code + year | is_st（CSMAR SPT_Trdchg 官方区间）|\n"
         "| 宏观指标 | `data/external/macro_industry.csv` | year | gdp_growth, m2_growth, cpi_yoy, ppi_yoy, social_financing_growth, pmi_manufacturing |\n"
     )
     lines.append(
