@@ -16,6 +16,8 @@
 from __future__ import annotations
 
 import argparse
+import shutil
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -253,9 +255,48 @@ def _macro_table() -> pd.DataFrame:
     )
 
 
-def generate(n_companies: int = 240, seed: int = settings.RANDOM_SEED) -> dict[str, Path]:
-    """生成全部原始表，返回 {表名: 路径}。"""
+CONTRACT_FILES = (
+    settings.RAW_FINANCIAL, settings.RAW_GOVERNANCE, settings.RAW_TEXT_SENTIMENT,
+    settings.RAW_LEGAL, settings.RAW_MARKET, settings.RAW_LABELS, settings.RAW_MACRO,
+)
+
+
+def _backup_contract(backup_root: Path | None = None) -> Path | None:
+    """把现有契约表整批备份到 data/demo_raw/backup_<时间戳>/，避免被演示数据覆盖。"""
+    existing = [p for p in CONTRACT_FILES if Path(p).exists()]
+    if not existing:
+        return None
+    backup_root = backup_root or (settings.DATA_DIR / "demo_raw")
+    target = backup_root / f"backup_{datetime.now():%Y%m%d_%H%M%S}"
+    target.mkdir(parents=True, exist_ok=True)
+    for path in existing:
+        shutil.copy2(path, target / Path(path).name)
+    logger.warning("已备份 %d 个契约表到 %s", len(existing), settings.rel(target))
+    return target
+
+
+def generate(
+    n_companies: int = 240,
+    seed: int = settings.RANDOM_SEED,
+    force: bool = False,
+) -> dict[str, Path]:
+    """生成全部原始表，返回 {表名: 路径}。
+
+    默认**拒绝覆盖已存在的契约表**：`data/raw/` 是真实数据的唯一入口，
+    演示数据只能写入空目录，或在 ``force=True`` 时先整批备份再写入。
+    """
     settings.ensure_dirs()
+    if settings.RAW_FINANCIAL.exists() and not force:
+        raise SystemExit(
+            "检测到已存在的原始契约表 data/raw/csmar_financial.csv。\n"
+            "演示数据会覆盖该目录，已中止。\n"
+            "如确需生成演示数据：\n"
+            "  1) 先备份真实数据（建议移到 data/versioned/ 或仓库外）；\n"
+            "  2) 再执行 python -m data.gen_demo_data --force（会先自动备份到 data/demo_raw/）。"
+        )
+    if force:
+        _backup_contract()
+
     rng = np.random.default_rng(seed)
 
     master = _company_master(n_companies, rng)
@@ -299,8 +340,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="生成演示用原始数据")
     parser.add_argument("--companies", type=int, default=240, help="公司数量（默认 240）")
     parser.add_argument("--seed", type=int, default=settings.RANDOM_SEED, help="随机种子")
+    parser.add_argument("--force", action="store_true",
+                        help="允许覆盖 data/raw（会先备份到 data/demo_raw/backup_*）")
     args = parser.parse_args()
-    generate(args.companies, args.seed)
+    generate(args.companies, args.seed, force=args.force)
 
 
 if __name__ == "__main__":

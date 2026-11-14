@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import platform
+import shutil
 import subprocess
 import time
 from importlib.metadata import version
@@ -84,6 +85,46 @@ def environment() -> dict:
     return info
 
 
+def make_run_id(data_sha256: str | None = None) -> str:
+    """生成一次运行的主键；训练先生成，后续评估/SHAP/预测/监控只读取它。"""
+    return f"{time.strftime('%Y%m%d-%H%M%S')}-{(data_sha256 or 'nodata')[:8]}"
+
+
+def current_run_id() -> str:
+    """读取已训练模型绑定的 run_id；缺失时返回 unknown，绝不静默新造一个。"""
+    if not settings.MODEL_META.exists():
+        return "unknown"
+    try:
+        return str(json.loads(settings.MODEL_META.read_text(encoding="utf-8")).get("run_id", "unknown"))
+    except Exception:
+        return "unknown"
+
+
+def snapshot_run_artifacts(run_id: str, target: Path | str | None = None) -> Path:
+    """把本次运行的模型/指标/元信息复制到 ``runs/<run_id>/``，避免被下次训练覆盖。
+
+    顶层 ``models/artifacts/*`` 仍指向"当前生产版本"；快照仅供回溯与对比。
+    """
+    target = Path(target or settings.ARTIFACT_DIR)
+    dest = target / "runs" / run_id
+    dest.mkdir(parents=True, exist_ok=True)
+    files = {
+        "model": settings.MODEL_PATH,
+        "calibrator": settings.CALIBRATOR_PATH,
+        "metrics": settings.METRICS_PATH,
+        "model_meta": settings.MODEL_META,
+        "feature_names": target / "feature_names.pkl",
+    }
+    copied = []
+    for stem, src in files.items():
+        src = Path(src)
+        if src.exists():
+            shutil.copy2(src, dest / f"{stem}{src.suffix}")
+            copied.append(src.name)
+    logger.info("运行快照已保存：%s（%d 个文件）", settings.rel(dest), len(copied))
+    return dest
+
+
 def record_run(
     *,
     run_type: str,
@@ -94,6 +135,7 @@ def record_run(
     features: list[str] | None = None,
     extra: dict | None = None,
     out_dir: Path | str | None = None,
+    run_id: str | None = None,
 ) -> dict:
     """生成并落盘运行清单；同时写 `runs/<run_id>.json` 与历史 jsonl。"""
     target = Path(out_dir or settings.ARTIFACT_DIR)
@@ -101,7 +143,7 @@ def record_run(
 
     state = {**dataset_state(), **(dataset or {})}
     feature_list = list(features or [])
-    run_id = f"{time.strftime('%Y%m%d-%H%M%S')}-{(state.get('sha256') or 'nodata')[:8]}"
+    run_id = run_id or make_run_id(state.get("sha256"))
 
     manifest = {
         "run_id": run_id,

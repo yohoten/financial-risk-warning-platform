@@ -1,7 +1,8 @@
-"""财务数据清洗：去重 → 缺失插补 → 缩尾 → 样本剔除。
+"""财务数据清洗：去重 → 缺失插补 → 样本剔除。
 
-清洗顺序有讲究：先插补再缩尾（否则极端值会污染插补基准），
-先按公司-时间排序再插补（保证插补使用相邻年度信息）。
+缩尾不在这里做：原始报表的缩尾边界若使用全样本（含验证/测试年），
+会把测试集信息带入训练。统一改为在 `etl.feature_engineering.add_features`
+中只用训练窗口估计分位点，再裁剪全样本。
 """
 
 from __future__ import annotations
@@ -111,6 +112,5 @@ def clean_panel(df: pd.DataFrame, numeric_cols: list[str]) -> pd.DataFrame:
     """一站式清洗入口，供 run_pipeline 调用。"""
     out = standardize_columns(dedupe(df))
     out = impute_missing(out, [c for c in numeric_cols if c in out.columns])
-    out = winsorize(out, [c for c in numeric_cols if c in out.columns])
     out = drop_invalid(out, exclude_cols=ID_COLUMNS + [TARGET_COLUMN])
     return out

@@ -16,7 +16,8 @@ from config import settings
 from config.feature_registry import FEATURE_MAP, TARGET_COLUMN, cn_names, direction_of
 from etl.io_utils import get_logger
 from models.data import load_dataset
-from models.predict import load_model
+from models.predict import load_model, load_meta
+from models.run_manifest import current_run_id
 
 logger = get_logger("shap")
 
@@ -52,7 +53,13 @@ def compute_and_cache(max_samples: int | None = None) -> dict:
     }
     joblib.dump(cache, settings.SHAP_VALUES)
     joblib.dump(explainer, settings.SHAP_EXPLAINER)
-    meta = {"n_samples": int(len(X)), "n_features": len(X.columns), "base_value": base_value}
+    meta = {
+        "run_id": current_run_id(),
+        "n_samples": int(len(X)),
+        "n_features": len(X.columns),
+        "base_value": base_value,
+        "model_created_at": load_meta().get("created_at", "unknown"),
+    }
     (settings.CACHE_DIR / "shap_meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     logger.info("SHAP 计算完成并缓存：%s 样本 × %s 特征，基准值 %.4f", len(X), len(X.columns), base_value)
     return cache

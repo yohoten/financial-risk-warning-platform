@@ -56,6 +56,7 @@ def predict_frame(df: pd.DataFrame, features: list[str] | None = None) -> pd.Dat
     out["st_prob"] = load_calibrator().apply(raw_prob)
     out["risk_level"] = out["st_prob"].map(score_to_level)
     out["risk_percentile"] = out["st_prob"].rank(pct=True).round(4)
+    out["run_id"] = load_meta().get("run_id", "unknown")
     return out
 
 
@@ -88,7 +89,17 @@ def refresh_predictions() -> pd.DataFrame:
     panel = read_table(settings.FEATURE_MATRIX) if resolve(settings.FEATURE_MATRIX) else read_table(settings.FEATURE_PANEL)
     scored = predict_frame(panel)
     write_table(scored, settings.PREDICTION_PATH)
-    logger.info("已刷新全量评分缓存：%d 行 → %s", len(scored), settings.rel(settings.PREDICTION_PATH))
+    meta = {
+        "run_id": load_meta().get("run_id", "unknown"),
+        "model_created_at": load_meta().get("created_at", "unknown"),
+        "rows": int(len(scored)),
+        "generated_at": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    (settings.CACHE_DIR / "predictions_meta.json").write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    logger.info("已刷新全量评分缓存：%d 行 → %s（run_id=%s）",
+                len(scored), settings.rel(settings.PREDICTION_PATH), meta["run_id"])
     return scored
 
 

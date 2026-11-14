@@ -22,6 +22,7 @@ import argparse
 import shutil
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from config import settings
@@ -179,8 +180,11 @@ def _load_cashflow() -> pd.DataFrame:
                 rows.append([code, int(year), *values])
         df = pd.DataFrame(rows, columns=[*KEY, *CASHFLOW_FIELDS])
         df["stock_code"] = df["stock_code"].astype(str).str.zfill(6)
+        # 注意：这里只做数值化，不做单位换算。
+        # `build_financial` 会对 AMOUNT_COLS 统一执行一次 元→亿元（1e-8）；
+        # 若此处再乘 1e-8，现金流量表会被缩放两次（历史 bug）。
         for col in CASHFLOW_FIELDS:
-            df[col] = pd.to_numeric(df[col], errors="coerce") * 1e-8
+            df[col] = pd.to_numeric(df[col], errors="coerce")
         df = df[df["year"].between(YEAR_MIN, YEAR_MAX)].drop_duplicates(KEY, keep="last")
         logger.info("现金流量表：%d 行（%s）", len(df), path.name)
         return df
@@ -334,6 +338,43 @@ def _read_audit() -> pd.DataFrame:
     return df[[*KEY, "audit_opinion", "big4_audit", "audit_fee"]]
 
 
+def _read_management_ability() -> pd.DataFrame:
+    """管理层治理能力表（BDT_ManaGovAbil）→ 两职合一（ConcurrentPosition：0=否，1=是）。"""
+    path = settings.RAW_DIR / "CG_management_ability.csv"
+    if not path.exists():
+        return pd.DataFrame(columns=[*KEY, "duality"])
+    df = pd.read_csv(path, usecols=["Symbol", "Enddate", "ConcurrentPosition"],
+                     dtype=str, encoding="utf-8-sig")
+    year = df["Enddate"].astype(str).str[:4]
+    year_num = pd.to_numeric(year, errors="coerce")
+    mask = (df["Enddate"].astype(str).str.endswith("-12-31")
+            & year_num.between(YEAR_MIN, YEAR_MAX).fillna(False))
+    df = df.loc[mask].copy()
+    df["year"] = year_num[mask].astype(int)
+    df["stock_code"] = df["Symbol"].astype(str).str.extract(r"(\d{1,6})", expand=False).str.zfill(6)
+    df["duality"] = pd.to_numeric(df["ConcurrentPosition"], errors="coerce")
+    df = df[df["duality"].isin([0, 1])]
+    return df.sort_values(KEY).drop_duplicates(KEY, keep="last")[[*KEY, "duality"]]
+
+
+def _read_board_duality() -> pd.DataFrame:
+    """治理综合信息表（CG_Ybasic）→ 两职合一（Y1001b：1=同一人，2=不同一人）。"""
+    path = settings.RAW_DIR / "CG_board.csv"
+    if not path.exists():
+        return pd.DataFrame(columns=[*KEY, "duality"])
+    df = pd.read_csv(path, usecols=["Stkcd", "Reptdt", "Y1001b"], dtype=str, encoding="utf-8-sig")
+    year = df["Reptdt"].astype(str).str[:4]
+    year_num = pd.to_numeric(year, errors="coerce")
+    mask = (df["Reptdt"].astype(str).str.endswith("-12-31")
+            & year_num.between(YEAR_MIN, YEAR_MAX).fillna(False))
+    df = df.loc[mask].copy()
+    df["year"] = year_num[mask].astype(int)
+    df["stock_code"] = df["Stkcd"].astype(str).str.extract(r"(\d{1,6})", expand=False).str.zfill(6)
+    df["duality"] = df["Y1001b"].astype(str).str.strip().map({"1": 1, "2": 0})
+    df = df.dropna(subset=["duality"])
+    return df.sort_values(KEY).drop_duplicates(KEY, keep="last")[[*KEY, "duality"]]
+
+
 def build_governance(write: bool = False) -> pd.DataFrame:
     top10 = _read_top10()
     if top10.empty:
@@ -381,7 +422,21 @@ def build_governance(write: bool = False) -> pd.DataFrame:
     audit = _read_audit()
     if not audit.empty:
         gov = gov.merge(audit[[*KEY, "big4_audit", "audit_fee"]], on=KEY, how="left")
-    gov["duality"] = pd.NA  # 需「董事会治理」表
+    # 两职合一：优先管理层治理能力表（ConcurrentPosition），缺失用治理综合表（Y1001b）回填
+    dual = _read_management_ability()
+    board = _read_board_duality()
+    if dual.empty:
+        dual = board
+    elif not board.empty:
+        dual = dual.merge(board.rename(columns={"duality": "duality_board"}), on=KEY, how="outer")
+        dual["duality"] = dual["duality"].fillna(dual["duality_board"])
+        dual = dual[[*KEY, "duality"]]
+    if not dual.empty:
+        gov = gov.merge(dual, on=KEY, how="left")
+        logger.info("两职合一：非空率 %.1f%%（BDT 优先，CG_board 回填）",
+                    gov["duality"].notna().mean() * 100)
+    else:
+        gov["duality"] = pd.NA
     gov["audit_fee"] = gov.get("audit_fee")
 
     contract = [*KEY, "top1_holding", "top2_5_holding", "board_size", "independent_directors",
@@ -396,15 +451,191 @@ def build_governance(write: bool = False) -> pd.DataFrame:
 
 
 def build_market(write: bool = False) -> pd.DataFrame:
+    """审计 + CSMAR 日行情公司-年特征。
+
+    annual_turnover 统一为小数倍数（日换手率求和）；stock_volatility 为
+    日收益率样本标准差 ×sqrt(252)。保留 trading_days 和覆盖率辅助列，
+    极端值在特征层仅用训练窗口分位点缩尾。
+    """
     audit = _read_audit()
     if audit.empty:
         return pd.DataFrame()
     out = audit.copy()
-    out["annual_turnover"] = pd.NA      # 需「年个股回报率」表
-    out["stock_volatility"] = pd.NA     # 需「日行情」表
-    logger.info("市场/审计表：%d 行，非标意见 %.2f%%", len(out), out["audit_opinion"].mean() * 100)
+    trd_path = settings.RAW_DIR / "candidates" / "TRD_Dly_company_year_2013_2026.csv"
+    if trd_path.exists():
+        trd = pd.read_csv(trd_path, dtype={"Stkcd": str}, encoding="utf-8-sig")
+        trd = trd.rename(columns={"Stkcd": "stock_code"})
+        trd["stock_code"] = trd["stock_code"].str.zfill(6)
+        trd["year"] = pd.to_numeric(trd["year"], errors="coerce").astype(int)
+        trd["annual_turnover"] = pd.to_numeric(trd["annual_turnover"], errors="coerce")
+        trd["stock_volatility"] = pd.to_numeric(trd["stock_volatility"], errors="coerce")
+        valid = ((trd["trading_days"] > 0) & (trd["turnover_coverage"] >= 0.8)
+                 & (trd["return_coverage"] >= 0.8) & trd["year"].between(YEAR_MIN, YEAR_MAX))
+        trd["market_available"] = valid.astype(int)
+        trd.loc[~valid, ["annual_turnover", "stock_volatility"]] = pd.NA
+        cols = [*KEY, "annual_turnover", "stock_volatility", "market_available",
+                "trading_days", "turnover_coverage", "return_coverage"]
+        out = out.merge(trd[cols].drop_duplicates(KEY, keep="last"), on=KEY, how="left")
+    for col in ("annual_turnover", "stock_volatility"):
+        if col not in out.columns:
+            out[col] = pd.NA
+    if "market_available" not in out.columns:
+        out["market_available"] = 0
+    out["market_available"] = out["market_available"].fillna(0).astype(int)
+    logger.info("市场/审计表：%d 行，非标意见 %.2f%%，有效行情覆盖 %.2f%%", len(out),
+                out["audit_opinion"].mean() * 100, out["market_available"].mean() * 100)
     if write:
         _safe_write(out, settings.RAW_MARKET)
+    return out
+
+
+def _read_lawsuit_counts() -> pd.DataFrame:
+    """LA_DETAIL → 首次公告年 distinct EventID 数。
+
+    同一事件先取全历史最早 DeclareDate，再归属公司-年；后续进展/年报公告
+    不重复计数。该表 EventContent 含未转义逗号，所需字段位于前5列，按位置解析。
+    """
+    import csv
+
+    path = settings.RAW_DIR / "LAW_lawsuit.csv"
+    if not path.exists():
+        logger.warning("缺少 LAW_lawsuit.csv，litigation_count 留空")
+        return pd.DataFrame(columns=[*KEY, "litigation_count"])
+    records, bad = [], 0
+    with open(path, encoding="utf-8-sig", newline="") as fh:
+        reader = csv.reader(fh)
+        next(reader, None)
+        for fields in reader:
+            if len(fields) < 5:
+                bad += 1
+                continue
+            code, event_id, date = fields[0].strip(), fields[2].strip(), fields[4].strip()
+            year = date[:4]
+            if not year.isdigit() or not (YEAR_MIN <= int(year) <= YEAR_MAX):
+                continue
+            records.append((code, int(year), event_id))
+    if bad:
+        logger.warning("诉讼仲裁表：%d 行字段数不足已跳过", bad)
+    df = pd.DataFrame(records, columns=["stock_code", "year", "EventID"])
+    df["stock_code"] = df["stock_code"].astype(str).str.extract(r"(\d{1,6})", expand=False).str.zfill(6)
+    df = df.dropna(subset=["stock_code", "EventID"]).drop_duplicates(["stock_code", "EventID", "year"])
+    first = df.groupby(["stock_code", "EventID"], as_index=False)["year"].min()
+    out = first.groupby(KEY).size().rename("litigation_count").reset_index()
+    logger.info("诉讼仲裁：%d 个公司-年有涉诉，合计 %d 起事件", len(out), int(out["litigation_count"].sum()))
+    return out
+
+
+def _read_violation_counts() -> pd.DataFrame:
+    """违规信息总表（STK_Violation_Main）→ 公司-年处罚次数。
+
+    口径：IsViolated=Y（上市公司自身违规），按处理文件日期 DisposalDate 所在年，
+    ViolationID 去重（同一事件的后续进展不重复计数）。
+    """
+    path = settings.RAW_DIR / "VIO_penalty.csv"
+    if not path.exists():
+        logger.warning("缺少 VIO_penalty.csv，penalty_count 留空")
+        return pd.DataFrame(columns=[*KEY, "penalty_count"])
+    df = pd.read_csv(path, usecols=["ViolationID", "Symbol", "DisposalDate", "IsViolated"],
+                     dtype=str, encoding="utf-8-sig")
+    df = df[df["IsViolated"].astype(str).str.strip().str.upper().eq("Y")]
+    year = df["DisposalDate"].astype(str).str[:4]
+    mask = year.str.isdigit() & year.astype(int).between(YEAR_MIN, YEAR_MAX)
+    df = df.loc[mask].copy()
+    df["year"] = year[mask].astype(int)
+    df["stock_code"] = df["Symbol"].astype(str).str.extract(r"(\d{1,6})", expand=False).str.zfill(6)
+    df = df.drop_duplicates(["stock_code", "year", "ViolationID"])
+    out = df.groupby(KEY).size().rename("penalty_count").reset_index()
+    logger.info("违规处罚：%d 个公司-年有处罚，合计 %d 起", len(out), int(out["penalty_count"].sum()))
+    return out
+
+
+def build_legal(write: bool = False) -> pd.DataFrame:
+    """司法/合规公司-年全网格。
+
+    诉讼：全历史首次 DeclareDate 年内按 EventID 去重，后续进展不重复；
+    处罚：DisposalDate 年内按 ViolationID 去重。与 candidates/legal_events.csv
+    的“事件最终公告年”及旧在线表“年度公告活动”均不同，禁止混用。
+    """
+    law = _read_lawsuit_counts()
+    vio = _read_violation_counts()
+    events = law.merge(vio, on=KEY, how="outer")
+    fin = pd.read_csv(settings.RAW_FINANCIAL, dtype={"stock_code": str},
+                      usecols=["stock_code", "year"], encoding="utf-8-sig")
+    fin["stock_code"] = fin["stock_code"].str.zfill(6)
+    fin["year"] = pd.to_numeric(fin["year"], errors="coerce")
+    fin = fin.dropna(subset=KEY)
+    fin["year"] = fin["year"].astype(int)
+    fin = fin[fin["stock_code"].str[:3].isin(A_SHARE_PREFIXES) & fin["year"].between(YEAR_MIN, YEAR_MAX)]
+    # 2026 仅保留实际有事件的键，不用 2025 公司集外推，且标记为未完整。
+    keys = pd.concat([fin[KEY], events.loc[events["year"].eq(YEAR_MAX), KEY]], ignore_index=True).drop_duplicates(KEY)
+    out = keys.merge(events, on=KEY, how="left", validate="one_to_one")
+    for col in ("litigation_count", "penalty_count"):
+        out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0).astype(int)
+    out["legal_event_count"] = out["litigation_count"] + out["penalty_count"]
+    out["has_lawsuit"] = out["litigation_count"].gt(0).astype(int)
+    out["has_penalty"] = out["penalty_count"].gt(0).astype(int)
+    out["legal_available"] = out["year"].lt(YEAR_MAX).astype(int)
+    out["legal_source"] = "CSMAR.LA_DETAIL first announcement year + STK_Violation_Main disposal year"
+    out = out.sort_values(KEY).reset_index(drop=True)
+    logger.info("司法全网格：%d 行；诉讼合计 %d，处罚合计 %d；完整年度覆盖标记 %.1f%%",
+                len(out), out["litigation_count"].sum(), out["penalty_count"].sum(),
+                out["legal_available"].mean() * 100)
+    if write:
+        _safe_write(out, settings.RAW_LEGAL)
+    return out
+
+
+def build_digital(write: bool = False) -> pd.DataFrame:
+    """数字化转型词频（年报口径 + MD&A 口径）→ digital_features.csv。
+
+    源表为已清洗的 DT_digital_transform.csv / DT_mda_orientation.csv
+    （CSMAR 数字化转型库，吴非等 2021 词频法）。词频右偏严重，统一 log(1+x)。
+    """
+    path = settings.RAW_DIR / "DT_digital_transform.csv"
+    if not path.exists():
+        logger.warning("缺少 DT_digital_transform.csv，数字化转型特征留空")
+        return pd.DataFrame()
+    df = pd.read_csv(path, dtype={"Symbol": str, "SgnYear": str}, encoding="utf-8-sig")
+    out = pd.DataFrame({
+        "stock_code": df["Symbol"].astype(str).str.zfill(6),
+        "year": pd.to_numeric(df["SgnYear"], errors="coerce"),
+    })
+    out = out[out["year"].between(YEAR_MIN, YEAR_MAX)].copy()
+    df = df.loc[out.index]
+    freq_map = {
+        "DTTotal": "dt_wordfreq", "AITechnology": "dt_ai", "BlockChainTechnology": "dt_blockchain",
+        "CloudComputingTech": "dt_cloud", "BigDataTechnology": "dt_bigdata",
+        "DigitalTechApplication": "dt_application",
+    }
+    for src, dst in freq_map.items():
+        out[dst] = np.log1p(pd.to_numeric(df[src], errors="coerce").fillna(0))
+    out = out.dropna(subset=["year"])
+    out["year"] = out["year"].astype(int)
+    out = out.drop_duplicates(KEY, keep="last")
+    out["digital_available"] = 1  # 年报源表有记录；DTTotal=0 仍是有效观测
+
+    mda_path = settings.RAW_DIR / "DT_mda_orientation.csv"
+    if mda_path.exists():
+        mda = pd.read_csv(mda_path, dtype={"Symbol": str, "SgnYear": str}, encoding="utf-8-sig")
+        mda = pd.DataFrame({
+            "stock_code": mda["Symbol"].astype(str).str.zfill(6),
+            "year": pd.to_numeric(mda["SgnYear"], errors="coerce"),
+            "dt_mda_wordfreq": np.log1p(pd.to_numeric(mda["DTTotal"], errors="coerce").fillna(0)),
+        }).dropna(subset=["year"])
+        mda["year"] = mda["year"].astype(int)
+        mda = mda.drop_duplicates(KEY, keep="last")
+        out["year"] = out["year"].astype(int)
+        out = out.merge(mda, on=KEY, how="outer")
+        out["digital_available"] = out["digital_available"].fillna(0).astype(int)
+    else:
+        logger.warning("缺少 DT_mda_orientation.csv，dt_mda_wordfreq 留空")
+        out["dt_mda_wordfreq"] = pd.NA
+        out["year"] = out["year"].astype(int)
+    out = out.sort_values(KEY).reset_index(drop=True)
+    logger.info("数字化转型：%d 个公司-年，dt_wordfreq 非零率 %.1f%%", len(out),
+                (out["dt_wordfreq"] > 0).mean() * 100)
+    if write:
+        _safe_write(out, settings.RAW_DIGITAL)
     return out
 
 
@@ -483,7 +714,8 @@ def build_labels(write: bool = False) -> pd.DataFrame | None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="CSMAR 原始导出 → raw 契约")
     parser.add_argument("--step", default="all",
-                        choices=["all", "basic", "financial", "governance", "market", "labels", "list"])
+                        choices=["all", "basic", "financial", "governance", "market",
+                                 "legal", "digital", "labels", "list"])
     parser.add_argument("--write", action="store_true", help="写入 data/raw（默认只演练）")
     args = parser.parse_args()
 
@@ -501,6 +733,10 @@ def main() -> None:
         build_governance(args.write)
     if args.step in {"all", "market"}:
         build_market(args.write)
+    if args.step in {"all", "legal"}:
+        build_legal(args.write)
+    if args.step in {"all", "digital"}:
+        build_digital(args.write)
     if args.step in {"all", "labels"}:
         build_labels(args.write)
 

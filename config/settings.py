@@ -19,6 +19,14 @@ CLEANED_DIR = DATA_DIR / "cleaned"
 FEATURE_STORE_DIR = DATA_DIR / "feature_store"
 EXTERNAL_DIR = DATA_DIR / "external"
 
+# 数据落地区与暂存区：下载原包只读，暂存区做规范化命名后再进入契约层。
+INCOMING_DIR = DATA_DIR / "incoming"
+STAGING_DIR = INCOMING_DIR / "csmar"
+# 用户下载的 CSMAR 原始包目录（体积大、不入库）；可用环境变量指向别处。
+RAW_DOWNLOAD_DIR = Path(
+    os.getenv("RISK_RAW_DOWNLOAD_DIR", str(PROJECT_ROOT / "DATA_RAW_Download"))
+)
+
 CRAWLER_DIR = PROJECT_ROOT / "crawlers"
 ETL_DIR = PROJECT_ROOT / "etl"
 MODEL_DIR = PROJECT_ROOT / "models"
@@ -36,7 +44,8 @@ RAW_FINANCIAL = RAW_DIR / "csmar_financial.csv"          # 财务报表主表
 RAW_GOVERNANCE = RAW_DIR / "csmar_governance.csv"        # 公司治理
 RAW_TEXT_SENTIMENT = RAW_DIR / "text_sentiment.csv"      # 年报 MD&A 情感
 RAW_LEGAL = RAW_DIR / "legal_events.csv"                 # 司法/合规事件
-RAW_MARKET = RAW_DIR / "market_features.csv"             # 市场交易特征
+RAW_DIGITAL = RAW_DIR / "digital_features.csv"           # 数字化转型词频
+RAW_MARKET = RAW_DIR / "market_features_trd.csv"         # 市场交易特征（TRD 小数口径）
 RAW_LABELS = RAW_DIR / "labels_st.csv"                   # ST 标签
 RAW_MACRO = EXTERNAL_DIR / "macro_industry.csv"          # 宏观与行业指标
 
@@ -45,6 +54,15 @@ FEATURE_PANEL = FEATURE_STORE_DIR / "panel_features.parquet"
 FEATURE_MATRIX = FEATURE_STORE_DIR / "panel_model_input.parquet"
 FEATURE_LIST = FEATURE_STORE_DIR / "selected_features.json"
 FEATURE_REPORT = FEATURE_STORE_DIR / "feature_selection_report.csv"
+
+# 覆盖标记：不进入特征筛选，但随面板/建模输入保留，供评估、监控和前端区分
+# “真实缺失”与“业务上的 0 值”。
+AVAILABILITY_COLUMNS = [
+    "text_available",
+    "legal_available",
+    "digital_available",
+    "market_available",
+]
 
 MODEL_PATH = ARTIFACT_DIR / "xgboost_final.json"
 MODEL_ALL_PATH = ARTIFACT_DIR / "all_models.pkl"
@@ -111,9 +129,16 @@ PSI_WARN = 0.10
 PSI_BLOCK = 0.25
 MIN_FEATURES = 25
 
+# 特征缩尾：只用训练窗口估计分位点，再应用到验证/测试，避免测试集信息泄露。
+WINSOR_LOWER = 0.01
+WINSOR_UPPER = 0.99
+
 # ---------------------------------------------------------------------------
 # 样本范围
 # ---------------------------------------------------------------------------
+MANUFACTURING_PREFIX = "C"
+
+# 仅用于演示数据生成；真实数据按证监会门类前缀 C（制造业）整体过滤。
 INDUSTRIES = {
     "C13": "农副食品加工业",
     "C26": "化学原料和化学制品制造业",
@@ -126,6 +151,9 @@ INDUSTRIES = {
 }
 
 EXCLUDED_INDUSTRIES = {"J": "金融业", "K": "房地产业", "S": "综合"}
+# 论文主样本：沪深 A 股制造业（证监会 C 门类）。原始财务表保留全 A，
+# 仅在清洗面板阶段过滤，便于后续开展全 A 稳健性对照。
+SAMPLE_INDUSTRY_PREFIXES = ("C",)
 
 # ---------------------------------------------------------------------------
 # 运行环境

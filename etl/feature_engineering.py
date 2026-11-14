@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from config import settings
-from config.feature_registry import FEATURE_KEYS, ID_COLUMNS, TARGET_COLUMN, group_of
+from config.feature_registry import FEATURE_KEYS, ID_COLUMNS, TARGET_COLUMN, by_group, group_of
 from etl.clean_financial import clean_panel
 from etl.clean_text import clean_sentiment
 from etl.io_utils import get_logger, read_table, resolve, write_table
@@ -173,6 +173,52 @@ def sync_label(features: pd.DataFrame, labels: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+# 二值/类别变量不参与缩尾，否则分位点会退化为 0/1 常量。
+_NO_WINSOR = {"audit_opinion", "big4_audit", "duality"}
+# 计数特征缩尾后必须回到整数，避免出现“20.68 次诉讼”这类无语义取值。
+_INTEGER_FEATURES = {"litigation_count", "penalty_count", "fcf_negative_years"}
+
+
+def _winsorize_train_period(panel: pd.DataFrame, features: list[str]) -> pd.DataFrame:
+    """只用训练窗口估计 1%/99% 分位点，再裁剪全样本。
+
+    这样验证集/测试集的极端值不会反向影响缩尾边界；同时保留极端值对树模型
+    的“方向信息”，只压掉量级异常。
+    """
+    train_mask = panel["year"].between(*settings.TRAIN_YEAR_RANGE)
+    clipped = 0
+    for col in features:
+        if col in _NO_WINSOR or col not in panel.columns:
+            continue
+        train_values = panel.loc[train_mask, col].dropna()
+        if len(train_values) < 20:
+            continue
+        lo = float(train_values.quantile(settings.WINSOR_LOWER))
+        hi = float(train_values.quantile(settings.WINSOR_UPPER))
+        if np.isfinite(lo) and np.isfinite(hi) and hi > lo:
+            panel[col] = panel[col].clip(lo, hi)
+            if col in _INTEGER_FEATURES:
+                panel[col] = panel[col].round().astype(int)
+            clipped += 1
+    logger.info("特征缩尾（训练窗口 %.0f%%/%.0f%%）：%d 维",
+                settings.WINSOR_LOWER * 100, settings.WINSOR_UPPER * 100, clipped)
+    return panel
+
+
+def _filter_manufacturing(financial: pd.DataFrame) -> pd.DataFrame:
+    """只保留证监会行业门类 C（制造业）样本。
+
+    真实样本契约是“沪深 A 股 C 制造业”，不能只靠 8 个演示子行业过滤；
+    这里按一级门类前缀统一收口，避免漏掉 C13/C15/C17 等其他制造业子类。
+    """
+    before = len(financial)
+    industry = financial["industry"].astype(str).str.upper()
+    out = financial[industry.str.startswith(settings.MANUFACTURING_PREFIX)].copy()
+    logger.info("C 制造业过滤：%d → %d 行（剔除 %d 行）",
+                before, len(out), before - len(out))
+    return out.reset_index(drop=True)
+
+
 def _read_optional(path, required_cols: list[str], table_name: str) -> pd.DataFrame:
     """可缺省的数据表：缺失时返回空表并告警，对应维度在后续插补中置 0。
 
@@ -206,6 +252,7 @@ def build_base_panel(
     legal: pd.DataFrame | None = None,
     labels: pd.DataFrame | None = None,
     macro: pd.DataFrame | None = None,
+    digital: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """构建清洗层面板：清洗 → 宽表合并 → 标签对齐。
 
@@ -221,6 +268,9 @@ def build_base_panel(
         settings.RAW_MARKET, ["audit_opinion"], "市场/审计特征")
     legal = legal if legal is not None else _read_optional(
         settings.RAW_LEGAL, ["litigation_count", "penalty_count"], "诉讼/处罚")
+    if digital is None:
+        digital = _read_optional(
+            settings.RAW_DIGITAL, ["dt_wordfreq"], "数字化转型词频")
     if labels is None:
         if resolve(settings.RAW_LABELS) is None:
             raise FileNotFoundError(
@@ -240,19 +290,47 @@ def build_base_panel(
     sentiment, market = _normalize_keys(sentiment), _normalize_keys(market)
     legal, labels = _normalize_keys(legal), _normalize_keys(labels)
     macro = _normalize_keys(macro)
+    digital = _normalize_keys(digital)
 
     numeric_cols = [
         c for c in financial.columns
         if c not in {"stock_code", "company_name", "industry"} and pd.api.types.is_numeric_dtype(financial[c])
     ]
     financial = clean_panel(financial, numeric_cols)
+    financial = _filter_manufacturing(financial)
+
+    # 覆盖标记在 merge 前写入：标记的是“源表是否有该公年记录”，
+    # 不是事件是否发生；没有记录时显式置 0，避免与真实缺失混淆。
+    if "text_available" not in sentiment.columns:
+        sentiment = sentiment.assign(text_available=1)
+    if "legal_available" not in legal.columns:
+        legal = legal.assign(legal_available=1)
+    if "digital_available" not in digital.columns:
+        digital = digital.assign(digital_available=1)
+    if "market_available" not in market.columns:
+        market = market.assign(
+            market_available=market[[c for c in ("annual_turnover", "stock_volatility") if c in market.columns]]
+            .notna().any(axis=1).astype(int)
+        )
 
     panel = financial.merge(governance, on=KEY, how="left", suffixes=("", "_gov"))
     panel = panel.merge(clean_sentiment(sentiment), on=KEY, how="left")
     panel = panel.merge(market, on=KEY, how="left", suffixes=("", "_mkt"))
     panel = panel.merge(legal, on=KEY, how="left")
+    panel = panel.merge(digital, on=KEY, how="left")
     panel = panel.merge(macro, on="year", how="left")
     panel = sync_label(panel, labels)
+
+    for col in settings.AVAILABILITY_COLUMNS:
+        if col not in panel.columns:
+            panel[col] = 0
+        panel[col] = pd.to_numeric(panel[col], errors="coerce").fillna(0).clip(0, 1).astype(int)
+
+    # 计数/词频类特征的语义是「无记录=0」，不能用行业-年度中位数插补：
+    # 未出现在诉讼/违规/词频表中的公司-年即为 0 起事件 / 0 词频，直接置 0。
+    zero_semantic = ["litigation_count", "penalty_count", *[f.key for f in by_group("digital")]]
+    zero_cols = [c for c in zero_semantic if c in panel.columns]
+    panel[zero_cols] = panel[zero_cols].fillna(0.0)
 
     logger.info(
         "清洗面板构建完成：%d 行 × %d 列（%d 家公司，%d-%d）",
@@ -263,9 +341,13 @@ def build_base_panel(
 
 
 def add_features(base: pd.DataFrame) -> pd.DataFrame:
-    """在清洗面板上计算 73 维衍生特征，并截取建模窗口，输出特征面板。"""
+    """在清洗面板上计算注册表定义的全部衍生特征，并截取建模窗口。"""
     panel = compute_features(base)
     panel = _governance_derived(panel)
+
+    # 先缩尾，再截取建模窗口；缩尾边界只从训练年份估计，避免验证/测试泄漏。
+    available_features = [f for f in FEATURE_KEYS if f in panel.columns]
+    panel = _winsorize_train_period(panel, available_features)
 
     # 先在有完整历史的面板上算增长率/滚动指标，再截取建模窗口，避免丢失滞后信息
     panel = panel[panel["year"].isin(settings.PANEL_YEARS)]
@@ -286,9 +368,11 @@ def add_features(base: pd.DataFrame) -> pd.DataFrame:
         for col in unknown:
             panel[col] = 0.0
 
-    ordered = ID_COLUMNS + [TARGET_COLUMN] + FEATURE_KEYS
-    extras = [c for c in ["total_assets", "revenue", "net_profit", "ocf"] if c in panel.columns]
-    panel = panel[ordered + extras].sort_values(KEY).reset_index(drop=True)
+    aux = [c for c in settings.AVAILABILITY_COLUMNS if c in panel.columns]
+    ordered = ID_COLUMNS + [TARGET_COLUMN] + FEATURE_KEYS + aux
+    extras = [c for c in ["total_assets", "revenue", "net_profit", "ocf",
+                          "trading_days", "turnover_coverage", "return_coverage"] if c in panel.columns]
+    panel = panel[list(dict.fromkeys(ordered + extras))].sort_values(KEY).reset_index(drop=True)
 
     logger.info(
         "特征面板构建完成：%d 行 × %d 维特征，正样本率 %.2f%%，时间跨度 %d-%d",
@@ -308,9 +392,10 @@ def build_panel(
     legal: pd.DataFrame | None = None,
     labels: pd.DataFrame | None = None,
     macro: pd.DataFrame | None = None,
+    digital: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """构建特征面板：清洗层 → 衍生特征（保持旧接口兼容）。"""
-    base = build_base_panel(financial, governance, sentiment, market, legal, labels, macro)
+    base = build_base_panel(financial, governance, sentiment, market, legal, labels, macro, digital)
     return add_features(base)
 
 

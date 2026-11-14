@@ -29,7 +29,7 @@ def test_every_group_has_features():
 def test_group_counts_match_documented_design():
     counts = Counter(f.group for f in FEATURES)
     assert counts["solvency"] == 10
-    assert counts["profitability"] == 10
+    assert counts["profitability"] == 10  # 完整历史报告期补抓后，2015扣非覆盖94.31%
     assert counts["operation"] == 10
     assert counts["growth"] == 8
     assert counts["cashflow"] == 7

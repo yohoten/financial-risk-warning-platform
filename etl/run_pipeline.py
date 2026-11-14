@@ -27,15 +27,18 @@ def ensure_raw_data(refresh: bool = False, companies: int = 240) -> None:
     if refresh or not settings.RAW_FINANCIAL.exists():
         from data.gen_demo_data import generate
 
-        logger.info("生成演示原始数据（%d 家公司）...", companies)
-        generate(companies)
+        logger.info("生成演示原始数据（%d 家公司，force=%s）...", companies, refresh)
+        generate(companies, force=refresh)
     else:
         logger.info("检测到已有原始数据：%s", settings.rel(settings.RAW_FINANCIAL))
 
 
 def build_model_input(panel: pd.DataFrame, features: list[str]) -> pd.DataFrame:
     """输出建模输入表：ID + 标签 + 选中特征 + 展示用辅助列。"""
-    extras = [c for c in ["total_assets", "revenue", "net_profit", "ocf"] if c in panel.columns]
+    extras = [c for c in ["total_assets", "revenue", "net_profit", "ocf",
+                          *settings.AVAILABILITY_COLUMNS,
+                          "trading_days", "turnover_coverage", "return_coverage"]
+              if c in panel.columns]
     cols = [c for c in ID_COLUMNS if c in panel.columns] + [TARGET_COLUMN] + features + extras
     out = panel[cols].copy()
     write_table(out, settings.FEATURE_MATRIX)
@@ -53,7 +56,7 @@ def run(refresh: bool = False, companies: int = 240, skip_selection: bool = Fals
     write_table(base, settings.CLEANED_PANEL)
     logger.info("清洗层已写出：%s（%d 行 × %d 列）", settings.rel(settings.CLEANED_PANEL), *base.shape)
 
-    # 特征层：在清洗面板上计算 73 维衍生特征
+    # 特征层：在清洗面板上计算 80 维衍生特征（注册表为唯一口径来源）
     panel = add_features(base)
     write_table(panel, settings.FEATURE_PANEL)
     logger.info("特征层已写出：%s（%d 行 × %d 列）", settings.rel(settings.FEATURE_PANEL), *panel.shape)

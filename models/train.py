@@ -7,11 +7,19 @@
 3. 其余四个模型作为基线/对照，固定合理默认参数；
 4. 全部模型在验证集上比较并做概率校准，XGBoost 作为主模型落盘。
 
+透明度约定
+----------
+- 训练结束打印「验证 + 测试」完整对比表，并写 ``model_comparison.csv``；
+- 主模型按项目设定固定为 XGBoost（``selection.rule=designated_primary_model``），
+  不按测试集指标挑模型；测试集只应用验证集冻结的阈值与校准器；
+- 每次运行的模型/指标/元信息复制到 ``models/artifacts/runs/<run_id>/``，避免覆盖。
+
 用法
 ----
-    python -m models.train                # 默认 30 次试验
-    python -m models.train --trials 100   # 完整调优
-    python -m models.train --no-optuna    # 跳过调优，快速验证链路
+    python -m models.train                      # 默认 30 次试验
+    python -m models.train --trials 50          # 完整调优
+    python -m models.train --objective pr_auc   # 以 PR-AUC 为目标调优
+    python -m models.train --no-optuna          # 跳过调优，快速验证链路
 """
 
 from __future__ import annotations
@@ -34,7 +42,12 @@ from etl.io_utils import get_logger
 from models.calibration import cross_fitted_probabilities, fit_calibrator, save_calibrator
 from models.data import Dataset, load_dataset
 from models.metrics import cost_optimal_threshold, evaluate_model, top_k_metrics
-from models.run_manifest import record_run
+from models.run_manifest import (
+    dataset_state,
+    make_run_id,
+    record_run,
+    snapshot_run_artifacts,
+)
 
 logger = get_logger("train")
 
@@ -147,15 +160,20 @@ def cross_validate(model_factory, ds: Dataset, n_splits: int = settings.CV_SPLIT
 # ---------------------------------------------------------------------------
 # Optuna 调优
 # ---------------------------------------------------------------------------
-def tune_xgboost(ds: Dataset, n_trials: int = 30) -> dict:
-    """TPE 贝叶斯搜索 + MedianPruner 剪枝。"""
+def tune_xgboost(ds: Dataset, n_trials: int = 30, objective: str = "auc") -> dict:
+    """TPE 贝叶斯搜索 + MedianPruner 剪枝。
+
+    ``objective`` 可选 ``auc``（默认，与历史结果一致）或 ``pr_auc``
+    （头部排序更相关，但验证集仅 ~75 个正样本，方差更大）。
+    无论优化目标是什么，都同时记录两者的最优值，便于对比与披露。
+    """
     import optuna
     from xgboost import XGBClassifier
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-    scale_pos_weight = float((ds.y_train == 0).sum() / max((ds.y_train == 1).sum(), 1))
+    metric_key = "pr_auc" if objective == "pr_auc" else "auc"
 
-    def objective(trial: "optuna.Trial") -> float:
+    def objective_fn(trial: "optuna.Trial") -> float:
         params = {
             "max_depth": trial.suggest_int("max_depth", 3, 7),
             "min_child_weight": trial.suggest_float("min_child_weight", 1, 15, log=True),
@@ -177,24 +195,79 @@ def tune_xgboost(ds: Dataset, n_trials: int = 30) -> dict:
             eval_set=[(ds.X_valid, ds.y_valid)],
             verbose=False,
         )
-        return evaluate_model(ds.y_valid, _proba(model, ds.X_valid))["auc"]
+        return evaluate_model(ds.y_valid, _proba(model, ds.X_valid))[metric_key]
 
     study = optuna.create_study(
         direction="maximize",
         sampler=optuna.samplers.TPESampler(seed=settings.RANDOM_SEED),
         pruner=optuna.pruners.MedianPruner(n_warmup_steps=10),
     )
-    study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
-    logger.info("Optuna 完成：最佳验证 AUC=%.4f（%d 次试验）", study.best_value, len(study.trials))
-    return {"params": study.best_params, "best_auc": round(study.best_value, 4), "n_trials": len(study.trials)}
+    study.optimize(objective_fn, n_trials=n_trials, show_progress_bar=False)
+
+    probe = XGBClassifier(
+        **study.best_params, objective="binary:logistic", eval_metric="auc",
+        tree_method="hist", n_jobs=-1, random_state=settings.RANDOM_SEED,
+    )
+    probe.fit(ds.X_train, ds.y_train)
+    best = evaluate_model(ds.y_valid, _proba(probe, ds.X_valid))
+    logger.info("Optuna 完成（目标=%s）：最佳验证 AUC=%.4f、PR-AUC=%.4f（%d 次试验）",
+                metric_key, best["auc"], best["pr_auc"], len(study.trials))
+    return {
+        "params": study.best_params,
+        "objective": metric_key,
+        "best_value": round(float(study.best_value), 4),
+        "best_auc": round(best["auc"], 4),
+        "best_pr_auc": round(best["pr_auc"], 4),
+        "n_trials": len(study.trials),
+    }
 
 
 # ---------------------------------------------------------------------------
 # 主训练流程
 # ---------------------------------------------------------------------------
-def train_all(trials: int = 30, use_optuna: bool = True, cv: bool = True) -> dict:
+def _comparison_frame(results: dict) -> pd.DataFrame:
+    """把验证/测试指标整理成对比表（测试集只应用阈值，不参与选择）。"""
+    rows = []
+    for name, m in results.items():
+        test = m.get(f"test_{settings.TEST_YEAR}", {})
+        rows.append({
+            "model": name,
+            "selected_as_final": name in {"XGBoost(tuned)", "XGBoost"},
+            "valid_auc": m.get("auc"),
+            "valid_pr_auc": m.get("pr_auc"),
+            "valid_ks": m.get("ks"),
+            "valid_recall_top10": m["top_k"]["top_10pct"]["recall"],
+            "valid_ece": m.get("ece"),
+            "test_auc": test.get("auc"),
+            "test_pr_auc": test.get("pr_auc"),
+            "test_ks": test.get("ks"),
+            "test_recall_top10": test.get("top_k", {}).get("top_10pct", {}).get("recall"),
+            "test_ece": test.get("ece"),
+        })
+    return pd.DataFrame(rows)
+
+
+def _log_comparison(frame: pd.DataFrame) -> None:
+    logger.info("模型对比（验证 %d 校准后 / 测试 %d 仅应用冻结阈值）：",
+                settings.VALID_YEAR, settings.TEST_YEAR)
+    logger.info("%-22s%9s%9s%9s%9s%9s%9s%9s%9s", "model", "vAUC", "vPR", "vR@10",
+                "vECE", "tAUC", "tPR", "tR@10", "tECE")
+    for _, row in frame.iterrows():
+        logger.info("%-22s%9.4f%9.4f%9.4f%9.4f%9.4f%9.4f%9.4f%9.4f",
+                    row["model"], row["valid_auc"], row["valid_pr_auc"],
+                    row["valid_recall_top10"], row["valid_ece"],
+                    row["test_auc"], row["test_pr_auc"], row["test_recall_top10"],
+                    row["test_ece"])
+
+
+def train_all(trials: int = 30, use_optuna: bool = True, cv: bool = True,
+              objective: str = "auc") -> dict:
     settings.ensure_dirs()
     ds = load_dataset()
+    # 先固定本次运行主键；评估、SHAP、预测、监控都从 model_meta.json 读取，
+    # 不再各自按时间生成新的 run_id。
+    run_id = make_run_id(dataset_state().get("sha256"))
+    logger.info("本次运行 run_id=%s", run_id)
     scale_pos_weight = float((ds.y_train == 0).sum() / max((ds.y_train == 1).sum(), 1))
 
     results: dict[str, dict] = {}
@@ -247,8 +320,8 @@ def train_all(trials: int = 30, use_optuna: bool = True, cv: bool = True) -> dic
     # ---- XGBoost 调优 ----
     tuning = {}
     if use_optuna and trials > 0:
-        logger.info("开始 Optuna 调优（%d 次试验）...", trials)
-        tuning = tune_xgboost(ds, trials)
+        logger.info("开始 Optuna 调优（%d 次试验，目标=%s）...", trials, objective)
+        tuning = tune_xgboost(ds, trials, objective=objective)
         from xgboost import XGBClassifier
 
         best = XGBClassifier(
@@ -314,7 +387,22 @@ def train_all(trials: int = 30, use_optuna: bool = True, cv: bool = True) -> dic
     joblib.dump(models, settings.MODEL_ALL_PATH)
     joblib.dump(ds.features, settings.ARTIFACT_DIR / "feature_names.pkl")
 
+    comparison = _comparison_frame(results)
+    comparison.to_csv(settings.ARTIFACT_DIR / "model_comparison.csv",
+                      index=False, encoding="utf-8-sig")
+    _log_comparison(comparison)
+    selection = {
+        "rule": "designated_primary_model",
+        "primary": "XGBoost(tuned)" if "XGBoost(tuned)" in results else "XGBoost",
+        "note": "按项目设定固定 XGBoost 为主模型；验证集只用于调参/阈值，测试集只应用不重选，"
+                "因此不按测试集指标挑模型",
+        "valid_best_pr_auc_model": comparison.loc[comparison["valid_pr_auc"].idxmax(), "model"],
+        "valid_best_auc_model": comparison.loc[comparison["valid_auc"].idxmax(), "model"],
+        "comparison_file": settings.rel(settings.ARTIFACT_DIR / "model_comparison.csv"),
+    }
+
     meta = {
+        "run_id": run_id,
         "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         "elapsed_sec": round(time.time() - started, 1),
         "n_features": len(ds.features),
@@ -330,6 +418,7 @@ def train_all(trials: int = 30, use_optuna: bool = True, cv: bool = True) -> dic
             "test": int(len(ds.test)), "positive_rate": round(float(ds.y_train.mean()), 4),
         },
         "tuning": tuning,
+        "selection": selection,
         "calibration": {
             **final_calibrator.describe(),
             "fit_on": f"valid_{settings.VALID_YEAR}",
@@ -395,11 +484,16 @@ def train_all(trials: int = 30, use_optuna: bool = True, cv: bool = True) -> dic
             "model_path": settings.rel(settings.MODEL_PATH),
             "calibrator_path": settings.rel(settings.CALIBRATOR_PATH),
             "lockbox_year": settings.LOCKBOX_YEAR,
+            "selection": selection,
+            "comparison_file": selection["comparison_file"],
         },
+        run_id=run_id,
     )
 
+    snapshot_run_artifacts(run_id)
     logger.info("模型已保存：%s", settings.rel(settings.MODEL_PATH))
     logger.info("指标已保存：%s", settings.rel(settings.METRICS_PATH))
+    logger.info("对比表已保存：%s", selection["comparison_file"])
     return results
 
 
@@ -408,8 +502,11 @@ def main() -> None:
     parser.add_argument("--trials", type=int, default=30, help="Optuna 试验次数（0 表示跳过）")
     parser.add_argument("--no-optuna", action="store_true", help="跳过贝叶斯调优")
     parser.add_argument("--no-cv", action="store_true", help="跳过交叉验证（节省时间）")
+    parser.add_argument("--objective", choices=["auc", "pr_auc"], default="auc",
+                        help="Optuna 优化目标：auc（默认，历史一致）或 pr_auc（头部排序更相关）")
     args = parser.parse_args()
-    train_all(trials=args.trials, use_optuna=not args.no_optuna, cv=not args.no_cv)
+    train_all(trials=args.trials, use_optuna=not args.no_optuna, cv=not args.no_cv,
+              objective=args.objective)
 
 
 if __name__ == "__main__":

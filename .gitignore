@@ -1,9 +1,17 @@
+# ============================================================
+# 金融风险预警平台 .gitignore
+# 原则：数据、产物、缓存、日志不入库；源码、文档、表结构说明、测试入库。
+# 校验：git status 只应出现源码/文档变更；git ls-files -i -c --exclude-standard 应为空。
+# ============================================================
+
 # ---- Python ----
 __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
 .coverage
 htmlcov/
 
@@ -11,33 +19,55 @@ htmlcov/
 .venv/
 venv/
 env/
+.workbuddy/
 
-# ---- 数据与产物（体积大/可再生成，不入库）----
+# ---- 落地区：CSMAR 原始包（只读、体积大）----
+DATA_RAW_Download/
+CSMAR_download/
+
+# ---- 暂存区：规范化中间表与批次归档 ----
+data/incoming/csmar/*.csv
+data/incoming/csmar/*.xlsx
+data/incoming/csmar/*.zip
+data/incoming/csmar/*.json
+data/incoming/csmar/raw/*
+!data/incoming/csmar/raw/.gitkeep
+data/incoming/csmar/2026*/
+# 注：data/incoming/csmar/desc/*.txt 是 CSMAR 字段说明（表结构参考），保留入库
+
+# ---- 契约层 / 清洗层 / 特征层 ----
 data/raw/*
 !data/raw/.gitkeep
 data/cleaned/*
 !data/cleaned/.gitkeep
-data/demo_raw/
-data/incoming/csmar/*.csv
-data/incoming/csmar/*.xlsx
 data/feature_store/*
 !data/feature_store/.gitkeep
+data/feature_store/_stale/
 data/external/*
 !data/external/.gitkeep
+data/versioned/*
+!data/versioned/README.md
+data/demo_raw/
 
+# ---- 模型产物 / 缓存 / 报告（可重建）----
 models/artifacts/*
 !models/artifacts/.gitkeep
 cache/*
 !cache/.gitkeep
-
 reports/*
 !reports/.gitkeep
+catboost_info/
 
+# ---- 文献与资料：克隆仓库、截图、机翻 PDF ----
 docs/downloads/repos/
-CSMAR_download/
+docs/downloads/**/*.png
+docs/downloads/**/*.jpg
+docs/downloads/**/*.jpeg
+docs/downloads/papers/*translat*.pdf
 
 # ---- 日志与临时文件 ----
 *.log
+*.err
 *.tmp
 *.part
 .DS_Store
@@ -52,6 +82,3 @@ cookies.txt
 .idea/
 .vscode/
 *.swp
-
-# ---- 训练临时目录 ----
-catboost_info/

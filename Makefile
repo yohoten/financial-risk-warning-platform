@@ -3,7 +3,7 @@
 
 PY ?= python
 
-.PHONY: help install data pipeline validate train evaluate shap monitor app test lint docker clean
+.PHONY: help install data sync sync-write readiness depreciation debt-fix annual-market pipeline validate train evaluate shap monitor app test lint docker clean
 
 help:  ## 显示所有可用命令
 	@grep -E "^[a-zA-Z_-]+:.*?## .*$$" $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -11,11 +11,29 @@ help:  ## 显示所有可用命令
 install:  ## 安装依赖
 	$(PY) -m pip install -r requirements.txt
 
-data:  ## 生成演示原始数据
+data:  ## 生成演示原始数据（data/raw 已有真实数据时会拒绝覆盖；确需覆盖用 --force）
 	$(PY) -m data.gen_demo_data
 
 pipeline:  ## 清洗 + 特征工程 + 四步特征筛选
 	$(PY) -m etl.run_pipeline
+
+sync:  ## 预演：DATA_RAW_Download → data/incoming/csmar 规范化
+	$(PY) -m scripts.sync_raw_download
+
+sync-write:  ## 执行规范化（硬链接/流式拼接 + manifest）
+	$(PY) -m scripts.sync_raw_download --write
+
+readiness:  ## 数据与训练就绪度体检（G0–G5）
+	$(PY) -m scripts.check_data_readiness
+
+depreciation:  ## G-03：用 FS_Comscfi 官方折旧替换回填值并写回
+	$(PY) -m scripts.import_comscfi_official --write
+
+debt-fix:  ## G-04：按 CSMAR 带息债务口径重建有息负债
+	$(PY) -m scripts.fix_interest_debt --write
+
+annual-market:  ## TRD_Year → 年度市场候选特征（仅消融）
+	$(PY) -m scripts.build_annual_market_features --write
 
 validate:  ## 原始数据质量校验（进入 ETL 前）
 	$(PY) -m scripts.validate_raw_data
@@ -35,7 +53,7 @@ monitor:  ## PSI 漂移监控
 app:  ## 启动 Streamlit 平台
 	$(PY) -m streamlit run streamlit_app/app.py
 
-all: data pipeline train evaluate shap  ## 全链路一键复现
+all: data pipeline train evaluate shap  ## 空目录全链路演示（已有真实数据请只跑 make pipeline）
 
 test:  ## 运行单元测试
 	$(PY) -m pytest -q

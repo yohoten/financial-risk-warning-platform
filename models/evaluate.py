@@ -23,6 +23,7 @@ from models.metrics import (
     load_thresholds,
 )
 from models.predict import load_model
+from models.run_manifest import current_run_id
 
 logger = get_logger("evaluate")
 
@@ -141,9 +142,11 @@ def build_report() -> str:
     if prob_test is not None:
         write_table(calibration_dataframe(ds.y_test, prob_test), settings.ARTIFACT_DIR / "calibration_curve_test.csv")
 
+    run_id = current_run_id()
     lines = [
         "# 模型评估报告",
         "",
+        f"- Run ID：`{run_id}`",
         f"- 数据集：训练 {len(ds.train)} / 验证 {len(ds.valid)} / 测试 {len(ds.test)}"
         f"（锁箱 {settings.LOCKBOX_YEAR}，待 2026 官方标签后评估）",
         f"- 特征数：{len(ds.features)} 维",
@@ -207,6 +210,7 @@ def build_report() -> str:
     logger.info("评估报告已生成：%s", settings.rel(settings.EVAL_REPORT))
 
     metrics_json = {
+        "run_id": run_id,
         f"valid_{settings.VALID_YEAR}": valid_metrics,
         f"test_{settings.TEST_YEAR}": test_metrics,
         "calibration": {**calibrator.describe(), "scope": "cross_fitted_valid_5fold"},

@@ -25,6 +25,7 @@ from models.calibration import cross_fitted_probabilities, load_calibrator
 from models.data import load_dataset
 from models.metrics import evaluate_model, load_thresholds
 from models.predict import load_model
+from models.run_manifest import current_run_id
 
 logger = get_logger("monitor")
 
@@ -87,6 +88,7 @@ def build_report(reference_year: int = settings.VALID_YEAR, current_year: int = 
         actions.append("模型与特征分布稳定，维持常规月度监控")
 
     report = {
+        "run_id": current_run_id(),
         "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         "reference_year": reference_year,
         "current_year": current_year,
