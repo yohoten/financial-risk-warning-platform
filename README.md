@@ -1,19 +1,19 @@
 # 🏦 上市公司财务风险智能预警平台
 
-> 基于 **XGBoost + SHAP** 的上市公司财务风险预警系统：融合 70+ 维多源异构特征，提供从数据采集、特征工程、模型训练到交互式解释与报告导出的一站式解决方案。
+> 基于 **XGBoost + SHAP** 的上市公司财务风险预警系统：融合 **80 维候选 / 36 维入选**的多源异构特征，提供从数据采集、特征工程、模型训练到交互式解释与报告导出的一站式解决方案。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/streamlit-1.29-FF4B4B.svg)](https://streamlit.io/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-2.0-green.svg)](https://xgboost.readthedocs.io/)
 [![SHAP](https://img.shields.io/badge/SHAP-0.45-orange.svg)](https://shap.readthedocs.io/)
-[![Tests](https://img.shields.io/badge/tests-61%20passed-brightgreen.svg)](./tests)
+[![Tests](https://img.shields.io/badge/tests-67%20passed-brightgreen.svg)](./tests)
 
 ---
 
 ## 📌 项目简介
 
-传统 Z-score、Logistic 回归在非线性关系捕捉与多维信息融合上存在局限，深度学习等"黑箱"模型又难以满足金融监管对可解释性的刚性要求。本项目以**沪深 A 股制造业上市公司**为研究对象，构建覆盖**财务指标、文本情感、公司治理、审计市场司法、宏观行业**九大维度的特征体系，以 **XGBoost** 为主模型，通过 **TreeSHAP** 实现四维度可解释性分析，并用 **Streamlit** 落地为五大模块的交互式预警平台。
+传统 Z-score、Logistic 回归在非线性关系捕捉与多维信息融合上存在局限，深度学习等"黑箱"模型又难以满足金融监管对可解释性的刚性要求。本项目以**沪深 A 股制造业上市公司**为研究对象，构建覆盖**偿债、盈利、营运、成长、现金流、文本情感、公司治理、审计市场司法、宏观行业、数字化转型**十大维度的特征体系（80 维候选、四步筛选后 36 维入选），以 **XGBoost** 为主模型，通过 **TreeSHAP** 实现四维度可解释性分析，并用 **Streamlit** 落地为五大模块的交互式预警平台。
 
 **核心主张**：在保证预测精度（OOT AUC ≥ 0.85、KS ≥ 0.40）的同时，让每一个风险评分都可被拆解、审计与追溯。
 
@@ -36,7 +36,7 @@
 | 📋 **批量预警** | 粘贴代码 / 上传 CSV、阈值实时调节、风险等级分布、Excel/CSV 一键导出 |
 | 🔍 **模型解释** | 全局重要性（特征 + 维度双视角）、依赖效应、交互强度、五模型对比、校准曲线、PSI 漂移监控 |
 | 📄 **报告导出** | 单企业 PDF 诊断报告（内置中文字体，无外部依赖）、批量 Excel（含汇总 Sheet）、评估报告、数据字典 |
-| ⚙️ **工程能力** | 一键 Docker 部署、61 项单元测试、四步特征筛选证据链、概率校准与成本阈值、模型元信息与运行清单留痕（数据/特征 hash、参数、阈值） |
+| ⚙️ **工程能力** | 一键 Docker 部署、67 项单元测试、四步特征筛选证据链、概率校准与成本阈值、模型元信息与运行清单留痕（数据/特征 hash、参数、阈值） |
 
 ---
 
@@ -66,21 +66,43 @@ streamlit run streamlit_app/app.py
 一键等价命令：
 
 ```bash
-make all      # data → pipeline → train → evaluate → shap
+make all      # data → pipeline → train → evaluate → shap（仅空目录演示）
 make app      # 启动平台
-make test     # 61 项单元测试
+make test     # 67 项单元测试
 ```
 
-### 方式二：接入真实数据（CSMAR 原始分表）
+> 已有真实数据时 **不要** 跑 `make all`：`data.gen_demo_data` 会检测到 `data/raw/csmar_financial.csv` 并拒绝覆盖（确需覆盖加 `--force`，会先备份到 `data/demo_raw/backup_*`）。真实数据链路用 `make pipeline` 起。
 
-原始导出直接放入 `data/raw/`（命名见 [`docs/CSMAR手动下载清单.md`](./docs/CSMAR手动下载清单.md)），
-由导入层完成「科目代码解码 → 合并报表过滤 → 元转亿元 → 三表合并」：
+### 方式二：接入真实数据（CSMAR 原始包）
+
+数据分三层落地，**下载区只读、暂存区规范、契约区稳定**：
+
+```text
+DATA_RAW_Download/           ① 落地区：CSMAR 原始包解压后原样放入（不改名、不入库）
+  └─ 资产负债表233415143.../FS_Combas.csv
+data/incoming/csmar/raw/     ② 暂存区：sync 脚本规范化命名 + manifest（行数/SHA256/来源）
+data/raw/*.csv               ③ 契约区：ETL 唯一读取入口（snake_case 主键 stock_code + year）
+```
 
 ```bash
-python -m scripts.convert_csmar_xlsx          # 现金流量表 XLSX → 精简 CSV（约 7 分钟）
-python -m etl.csmar_import --step all --write # 解码 + 合并 + 写契约表
-python -m scripts.validate_raw_data           # 质量体检，报告在 reports/data_quality/
-python -m etl.run_pipeline                    # 特征工程 + 四步筛选（需 ST 标签表）
+# 1) 原始包放入 DATA_RAW_Download/ 后，先预演再执行规范化
+python -m scripts.sync_raw_download            # 预演：识别表、分片、行数
+python -m scripts.sync_raw_download --write    # 执行：硬链接/流式拼接 + manifest
+
+# 2) 现金流量表 XLSX → CSV（约 7 分钟），再解码写契约表
+python -m scripts.convert_csmar_xlsx
+python -m etl.csmar_import --step all --write
+
+# 2.5) 口径补丁（重导入后必跑，幂等、自动备份）
+python -m scripts.import_comscfi_official --write   # 官方折旧（FS_Comscfi，覆盖 99.94%）
+python -m scripts.fix_interest_debt --write         # 带息债务口径（lt_debt 覆盖 100%）
+
+# 3) 质量校验 + 训练就绪体检（G0–G5，BLOCK 会返回非零退出码）
+python -m scripts.validate_raw_data
+python -m scripts.check_data_readiness
+
+# 4) 特征工程 + 四步筛选
+python -m etl.run_pipeline
 ```
 
 若导出文件已经是合约列名的合并表（而非 CSMAR 原始分表），改用通用映射层：
@@ -90,11 +112,26 @@ python -m etl.mapping --source D:\csmar\export --dry-run
 python -m etl.mapping --source D:\csmar\export --write
 ```
 
-**当前真实数据状态（2026-11-11）**：财务/治理/审计三块已接入（52,203 个公司-年，2013–2025），
-52/73 维特征有真实数值。CSMAR 账号暂未开通《特别处理变动文件》库权限（检索得到、进入显示“暂无数据”），
-已用基本信息表历年证券简称生成**ST 代理标签**（48,290 个 A 股公司-年，正样本 2.80%），
-训练/验证链路已跑通：按年扩展窗口训练 2015–2021、2022 年验证、**2023 年留出测试**（2024 锁箱，待 2026 官方 ST 标签披露后再评估）；当前 28 维筛选特征已纳入 `audit_opinion`。
-口径、代理标签局限与下载指引见 [`docs/CSMAR数据可行性报告.md`](./docs/CSMAR数据可行性报告.md)。
+**当前真实数据状态（2026-11-14，已通过就绪体检：PASS 26 / WARN 2 / BLOCK 0）**
+
+| 项 | 数值 |
+|---|---|
+| 原始财务表 | 52,203 公司-年（2013–2025，5,643 家） |
+| 建模面板 | 22,814 行 / 3,629 家 / 2015–2023，证监会 C 制造业 |
+| 特征 | 80 维候选（10 维度）→ 四步筛选 36 维；**全零特征 0 个** |
+| 标签 | 官方 ST 标签 48,290 公司-年，1,897 正（3.93%），来源 CSMAR `SPT_Trdchg` |
+| 切分 | 训练 16,233（712 正）/ 验证 3,209（75 正）/ 测试 3,372（127 正） |
+| 口径修正 | 折旧改用官方 `FS_Comscfi`（2015–2023 覆盖 99.94%）；有息负债改用 CSMAR 带息债务口径（覆盖 100%，`lt_debt` 长期借款回填后 100%） |
+| 2023 留出测试 | AUC 0.8962、PR-AUC 0.3986、KS 0.6609、Recall@Top10 66.93%、ECE 0.0126（50 trials；30 trials 为 PR-AUC 0.4268） |
+| 2024 锁箱 | 待 2026 官方 ST 标签，不报告指标 |
+
+> 训练**现在就可以跑**（`python -m models.train --trials 30`，约 5 分钟）；上述测试指标来自 `run_id=20261114-211237-da08d92c`，与 `run_manifest.json` 的数据 SHA256 绑定。
+>
+> 落地区（`DATA_RAW_Download/`）还有 3 张已核对、尚未入库的官方表：`FI_T1` 偿债能力（586,759 行，`F011501A` 带息债务比覆盖 100%）、`FS_Comscfi` 间接法（327,535 行，折旧 `D000103000` 覆盖 99.84%）、`TRD_Year` 年个股回报率（60,366 行）；它们可直接关闭"折旧/长期负债"两项口径缺口，命令 `python -m scripts.sync_raw_download --only FI_T1,FS_Comscfi,TRD_Year --write`。
+>
+> 仍待补：2026 官方标签（解锁 2024 锁箱）、扣非净利润官方表（FI_Indicators）、2025 年 MD&A 文本。
+> 缺口明细、补齐命令与验收标准见 [`docs/数据缺口与补齐清单_20261114.md`](./docs/数据缺口与补齐清单_20261114.md)；
+> 目录、清洗规则与质量门见 [`docs/数据治理与目录规范.md`](./docs/数据治理与目录规范.md)。
 
 ### 方式三：Docker 部署（答辩/交付推荐）
 
@@ -114,7 +151,9 @@ docker load < risk_platform_v1.0.tar && docker compose up -d
 ```mermaid
 graph TB
     subgraph L1["🗄️ 数据层 data/"]
-        A1[CSMAR 财务/治理] --> C1[etl.clean_financial<br/>去重·插补·缩尾]
+        A0[DATA_RAW_Download<br/>原始包·只读] -->|sync_raw_download| A0S[data/incoming/csmar<br/>规范单表+manifest]
+        A0S -->|csmar_import| A1[CSMAR 财务/治理<br/>data/raw 契约表]
+        A1 --> C1[etl.clean_financial<br/>去重·插补·缩尾]
         A2[巨潮资讯 年报PDF] --> S1[crawlers.cninfo_spider]
         A3[东方财富 新闻] --> S2[crawlers.eastmoney_spider]
         A4[企查查 司法风险] --> S3[crawlers.qichacha_spider]
@@ -124,9 +163,9 @@ graph TB
     end
 
     subgraph L2["🔧 特征层 etl/"]
-        FS --> F1[feature_engineering<br/>73 维 / 9 维度]
+        FS --> F1[feature_engineering<br/>80 维 / 10 维度]
         F1 --> F2[feature_selection<br/>IV→相关性/VIF→PSI→Boruta]
-        F2 --> F3[(panel_model_input<br/>35-50 维)]
+        F2 --> F3[(panel_model_input<br/>36 维)]
     end
 
     subgraph L3["🤖 模型层 models/"]
@@ -161,7 +200,12 @@ graph TB
 
 ```mermaid
 flowchart LR
-    A[data.gen_demo_data] --> B[etl.run_pipeline]
+    RAW[DATA_RAW_Download] --> S[sync_raw_download]
+    S --> IMP[etl.csmar_import]
+    IMP --> V[validate_raw_data]
+    V --> RD[check_data_readiness]
+    RD --> B[etl.run_pipeline]
+    DEMO[data.gen_demo_data] --> B
     B --> C[models.train]
     C --> D[models.evaluate]
     C --> E[models.shap_analysis]
@@ -193,9 +237,10 @@ flowchart LR
 
 ```
 financial-risk-warning-platform/
+├── DATA_RAW_Download/            # 📦 下载落地区（只读、不入库）：CSMAR 原始包原样存放
 ├── config/                       # ⚙️ 全局配置（唯一事实来源）
-│   ├── settings.py               #   路径、样本窗口、阈值、随机种子
-│   └── feature_registry.py       #   73 维特征元数据（中英文名/维度/方向/口径）
+│   ├── settings.py               #   路径（含落地区/暂存区）、样本窗口、阈值、随机种子
+│   └── feature_registry.py       #   80 维特征元数据（中英文名/维度/方向/口径）
 ├── crawlers/                     # 🕷️ 数据采集
 │   ├── base.py                   #   限速会话、重试、PDF 流式下载
 │   ├── cninfo_spider.py          #   巨潮资讯年报 + MD&A 抽取
@@ -207,9 +252,9 @@ financial-risk-warning-platform/
 │   ├── mapping.py                #   通用列名映射（已合并表 → 契约）
 │   ├── csmar_import.py           #   CSMAR 原始分表解码：科目代码 → 契约列，三表合并
 │   ├── stats_utils.py            #   IV / PSI / VIF / KS / 分箱
-│   ├── clean_financial.py        #   去重、三级插补、缩尾、样本剔除
+│   ├── clean_financial.py        #   去重、三级插补、样本剔除
 │   ├── clean_text.py             #   情感打分规范化
-│   ├── feature_engineering.py    #   73 维特征构建 + 标签对齐（T-2）
+│   ├── feature_engineering.py    #   80 维特征构建 + 标签对齐（T-2）
 │   ├── feature_selection.py      #   四步筛选 + 证据链报告
 │   └── run_pipeline.py           #   流水线编排（一条命令跑通数据层）
 ├── models/                       # 🤖 模型
@@ -220,7 +265,7 @@ financial-risk-warning-platform/
 │   ├── predict.py                #   推理服务（批量/单企业/缓存）
 │   ├── shap_analysis.py          #   SHAP 四维度 + 缓存
 │   ├── monitor.py                #   PSI 漂移 + 性能衰减 + 处置建议
-│   └── artifacts/                #   模型权重、指标、评估报告
+│   └── artifacts/                #   模型权重、指标、对比表、runs/<run_id>/ 快照
 ├── streamlit_app/                # 🖥️ 前端
 │   ├── app.py                    #   首页（状态自检 + 模块导航）
 │   ├── pages/                    #   1_数据看板 / 2_企业诊断 / 3_批量预警 / 4_模型解释 / 5_报告导出
@@ -229,22 +274,30 @@ financial-risk-warning-platform/
 ├── data/                         # 🗄️ 数据（详见 data/README.md）
 │   ├── gen_demo_data.py          #   演示数据生成器（潜在风险因子驱动）
 │   ├── mapping/csmar.yaml        #   CSMAR 字段映射（别名/单位/编码）
-│   ├── incoming/csmar/           #   下载日志、XLSX 转换产物、字段说明
-│   ├── raw/  cleaned/  feature_store/  external/  demo_raw/
+│   ├── incoming/csmar/           #   暂存区：raw/（规范单表+manifest）、desc/（字段说明）、批次目录
+│   ├── raw/                      #   契约层：ETL 唯一读取入口（candidates/ 存未激活增量）
+│   ├── cleaned/  feature_store/  external/  versioned/  demo_raw/
 ├── docs/                         # 📚 文档（见下方"文档索引"）
 │   ├── desgin/                   #   调研报告、实施方案、开题蓝图、架构说明书、运维手册
 │   ├── CSMAR手动下载清单.md       #   表清单、筛选条件、命名规范、验收标准
 │   ├── CSMAR数据可行性报告.md     #   已到数据验证、字段级可用性、缺口与下载指引
+│   ├── 数据缺口与补齐清单_20261114.md  # 当前缺口、补齐动作、验收（最新口径）
+│   ├── 数据治理与目录规范.md      #   分层目录、命名、清洗规则、质量门、激活流程
 │   ├── 数据字典与特征口径.md      #   由注册表自动生成
 │   ├── 文献与资料调研清单.md      #   49 项资源清单与获取状态
 │   ├── resources_catalog.csv     #   资源清单（机器可读）
 │   ├── batch_download_resources.py
 │   └── README_资源批量下载工具.md
-├── notebooks/01_探索性分析.ipynb  # 📈 EDA：样本结构/IV/均值差/基线ROC
+├── notebooks/01_探索性分析.ipynb  # 📈 EDA：样本漏斗/标签/IV/SMD/PSI/基线/可行性评分卡
+├── scripts/sync_raw_download.py   # 📥 落地区 → 暂存区：规范命名 + 分片拼接 + manifest
+├── scripts/import_comscfi_official.py # 🔧 G-03：FS_Comscfi 官方折旧替换（幂等、备份）
+├── scripts/fix_interest_debt.py   # 🔧 G-04：CSMAR 带息债务口径 + lt_debt 回填
+├── scripts/build_annual_market_features.py # 🔧 TRD_Year → 年行情候选（仅消融）
+├── scripts/check_data_readiness.py# ✅ 训练就绪体检（G0–G5，BLOCK 返回码 1）
 ├── scripts/gen_data_dictionary.py # 🔁 文档自动生成
 ├── scripts/convert_csmar_xlsx.py  # 🔁 现金流量表 XLSX 流式转 CSV
 ├── scripts/validate_raw_data.py   # ✅ 原始数据质量校验（结构/主键/标签/覆盖）
-├── tests/                        # ✅ 61 项单元测试
+├── tests/                        # ✅ 67 项单元测试
 │   ├── conftest.py               #   内存面板夹具（不写盘、不依赖模型）
 │   ├── test_feature_registry.py  #   特征口径一致性
 │   ├── test_feature_engineering.py
@@ -277,30 +330,33 @@ financial-risk-warning-platform/
 - **行业**：沪深 A 股制造业（证监会 C 类），剔除金融（J）、房地产（K）、综合（S）
 - **窗口**：训练 2015-2021，验证 2022（OOT），测试 2023（仅最终评估一次），2024 锁箱
 - **标签**：T 年被实施 ST/*ST 为正样本，特征取 T-2 年
-- **配对**：1:3 近邻匹配（行业 + 年份 + 总资产对数），稳健性检验使用 1:5 与全样本
+- **配对**：当前主实验使用全样本（未实现 1:3 近邻匹配）；1:3/1:5 匹配仅作为后续稳健性检验计划
 
-### 特征体系（73 维）
+### 特征体系（80 维 / 10 个维度）
 
 | 维度 | 特征数 | 代表性指标 |
 |------|-------|-----------|
-| 偿债能力 | 10 | 流动比率、资产负债率、利息保障倍数、有息负债率 |
-| 盈利能力 | 10 | ROA、ROE、毛利率、EBITDA 利润率、扣非净利润占比 |
-| 营运能力 | 10 | 应收/存货周转率、现金转换周期、收入含金量 |
-| 成长能力 | 8 | 营收增速、3 年复合增速、资本支出/折旧 |
+| 偿债能力 | 10 | 流动比率、速动比率、资产负债率、利息保障倍数、有息负债率 |
+| 盈利能力 | 10 | ROA、ROE、毛利率、净利率、EBITDA 利润率、扣非占比、EPS |
+| 营运能力 | 10 | 应收/存货/固定资产周转率、现金转换周期、应付天数 |
+| 成长能力 | 8 | 营收/利润/资产/权益增速、3 年复合增速、资本支出/折旧 |
 | 现金流 | 7 | 经营现金流/净利润、自由现金流/总资产、连续为负年数 |
-| 文本情感 | 6 | MD&A 正/负面得分、不确定性、情感波动率 |
-| 公司治理 | 6 | 股权集中度、Z 指数、独董比例、两职合一 |
-| 审计/市场/司法 | 8 | 审计意见、四大审计、换手率、涉诉/处罚次数 |
-| 宏观/行业 | 8 | GDP/M2/CPI/PPI/PMI、行业 ROA 与杠杆偏离度 |
+| 文本情感 | 6 | MD&A 正/负面得分、不确定性、情感极性/波动率、前瞻性比例 |
+| 公司治理 | 6 | 股权集中度、Z 指数、董事会规模、独董比例、两职合一 |
+| 审计/市场/司法 | 8 | 审计意见、四大审计、审计费用率、年换手率、波动率、涉诉/处罚次数 |
+| 宏观/行业 | 8 | GDP/M2/CPI/PPI/PMI、社融增速、行业 ROA 与杠杆偏离度 |
+| 数字化转型 | 7 | 数字化词频总强度、AI/区块链/云/大数据/应用词频、MD&A 数字化词频 |
 
 完整口径见 [`docs/数据字典与特征口径.md`](./docs/数据字典与特征口径.md)（由注册表自动生成）。
 
-### 四步特征筛选
+### 四步特征筛选（当前真实数据）
 
 ```
-73 维 ──IV≥0.02──▶ ~65 维 ──|r|≤0.85 & VIF≤10──▶ ~48 维
-       ──PSI≤0.25──▶ ~45 维 ──Boruta/RF 重要性──▶ 29-45 维
+80 维 ──IV≥0.02──▶ 74 维 ──|r|≤0.85 & VIF≤10──▶ 65 维
+      ──PSI≤0.25──▶ 55 维 ──RF 重要性（Boruta 不可用时降级）──▶ 36 维
 ```
+
+> 全零特征已从旧面板的 21 个降为 **0 个**；`audit_opinion` 作为领域先验强制保留。
 
 每一步的 IV、VIF、PSI、Boruta 结论都写入 `data/feature_store/feature_selection_report.csv`，形成可复现的证据链。
 
@@ -329,8 +385,13 @@ financial-risk-warning-platform/
 | KS | ≥ 0.40 | ≥ 0.50 | 辅助排序指标 |
 | Brier | ≤ 0.15 | ≤ 0.10 | 概率校准质量 |
 
-> 真实数据（代理 ST 标签）的 2023 留出测试：PR-AUC 0.292、Recall@Top10 66.46%、ECE 0.0088、AUC 0.872；
-> 完整表格与成本敏感性见 `models/artifacts/evaluation_report.md`。**代理标签结果不能替代官方 ST 表复核。**
+> **真实数据（官方 ST 标签）**：主模型 XGBoost(tuned)，当前产物 `run_id=20261114-213525-da08d92c`（50 trials）
+> 验证 2022 AUC 0.9196 / PR-AUC 0.4116 / ECE 0.0032；测试 2023 AUC 0.8962 / PR-AUC 0.3986 / KS 0.6609 / Recall@Top10 66.93% / ECE 0.0126。
+> 作为对照，默认预算（30 trials，`run_id=20261114-211237-da08d92c`）验证 PR-AUC 0.3981、测试 PR-AUC **0.4268**。
+> 两者说明：**验证集只有 75 个正样本，继续加 trials 提升的是验证集排序而非泛化**；默认预算保持 30，报告时固定一次结果。
+>
+> **选型口径**：主模型按项目设定固定为 XGBoost（`selection.rule=designated_primary_model`），不按测试集挑模型；五模型验证/测试对比见 `models/artifacts/model_comparison.csv`，每次运行的模型与指标快照见 `models/artifacts/runs/<run_id>/`。详见 [`docs/训练评估口径与模型选择.md`](./docs/训练评估口径与模型选择.md)。
+> 2024 锁箱未解锁，任何 2024/2026 指标均不在本表出现。
 
 ### 验证策略
 
@@ -363,14 +424,16 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 
 | 步骤 | 命令 | 预期产物 |
 |------|------|---------|
-| 1. 原始数据 | `python -m data.gen_demo_data` | `data/raw/*.csv`（2400 公司-年） |
-| 2. 特征工程 | `python -m etl.run_pipeline` | `panel_features.parquet`、`selected_features.json` |
-| 3. 训练 | `python -m models.train --trials 30` | `xgboost_final.json`、`metrics.json` |
-| 4. 评估 | `python -m models.evaluate` | `evaluation_report.md`、校准/分群 CSV |
-| 5. 解释 | `python -m models.shap_analysis` | `shap_values.pkl` |
-| 6. 监控 | `python -m models.monitor` | `monitor_report.json`、`psi_detail.csv` |
-| 7. 平台 | `streamlit run streamlit_app/app.py` | 五大模块可交互 |
-| 8. 测试 | `python -m pytest -q` | 61 passed |
+| 0. 落地区规范化（真实数据） | `python -m scripts.sync_raw_download --write` | `data/incoming/csmar/raw/*` + `_manifest_raw_download.json` |
+| 1. 原始数据 | `python -m data.gen_demo_data`（演示）/ `python -m etl.csmar_import --step all --write`（真实） | `data/raw/*.csv`（2,400 或 52,203 公司-年） |
+| 2. 质量与就绪门禁 | `python -m scripts.validate_raw_data` + `python -m scripts.check_data_readiness` | `reports/data_quality/*.md/json`，BLOCK 时退出码 1 |
+| 3. 特征工程 | `python -m etl.run_pipeline` | `panel_features.parquet`（22,814×96）、`selected_features.json`（36 维） |
+| 4. 训练 | `python -m models.train --trials 30` | `xgboost_final.json`、`metrics.json`、`run_manifest.json` |
+| 5. 评估 | `python -m models.evaluate` | `evaluation_report.md`、校准/分群 CSV |
+| 6. 解释 | `python -m models.shap_analysis` | `shap_values.pkl` |
+| 7. 监控 | `python -m models.monitor` | `monitor_report.json`、`psi_detail.csv` |
+| 8. 平台 | `streamlit run streamlit_app/app.py` | 五大模块可交互 |
+| 9. 测试 | `python -m pytest -q` | 67 passed |
 
 ---
 
@@ -388,7 +451,10 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | [`docs/desgin/开题报告_研究内容与技术路线写作蓝图.md`](./docs/desgin/开题报告_研究内容与技术路线写作蓝图.md) | 研究内容、关键问题、技术路线图（Mermaid/draw.io） |
 | [`docs/CSMAR手动下载清单.md`](./docs/CSMAR手动下载清单.md) | 13 张表的下载清单、筛选条件、命名规范、验收标准 |
 | [`docs/CSMAR数据可行性报告.md`](./docs/CSMAR数据可行性报告.md) | 已到数据验证结果、字段级可用性矩阵、缺口与补齐指引 |
-| [`docs/数据字典与特征口径.md`](./docs/数据字典与特征口径.md) | 73 维特征定义、数据表结构、缺失处理规则 |
+| [`docs/数据缺口与补齐清单_20261114.md`](./docs/数据缺口与补齐清单_20261114.md) | **最新口径**：12 项缺口、补齐动作、验收标准、可训练性判定 |
+| [`docs/数据治理与目录规范.md`](./docs/数据治理与目录规范.md) | 分层目录、命名规范、处理/清洗规则、G0–G5 质量门、候选激活流程 |
+| [`docs/训练评估口径与模型选择.md`](./docs/训练评估口径与模型选择.md) | 选型规则、指标口径、五模型验证/测试对比、30 vs 50 trials 过拟合证据 |
+| [`docs/数据字典与特征口径.md`](./docs/数据字典与特征口径.md) | 80 维特征定义、数据表结构、缺失处理规则 |
 | [`docs/文献与资料调研清单.md`](./docs/文献与资料调研清单.md) | 49 项文献/代码/数据资源清单、检索策略、获取状态与缺口 |
 | [`docs/README_资源批量下载工具.md`](./docs/README_资源批量下载工具.md) | 批量下载工具使用说明 |
 | [`data/README.md`](./data/README.md) | 数据结构、字段约定、替换真实数据步骤 |
@@ -406,6 +472,12 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 **Q：parquet 读写报错？**
 `etl.io_utils` 已内置降级：无 pyarrow 时自动改用同名 CSV，读写与文件检查都会自动适配（`resolve()`）。
 
+**Q：`DATA_RAW_Download/`、`data/incoming/`、`data/raw/` 有什么区别？**
+`DATA_RAW_Download/` 是下载落地区，保留 CSMAR 原始目录名与分片，**只读、不入库**；`data/incoming/csmar/raw/` 是暂存区，由 `scripts.sync_raw_download.py` 规范命名并写入 manifest；`data/raw/` 是契约层，列名 snake_case、主键 `stock_code + year`，是 ETL 唯一读取入口。这样换一次导出只影响暂存区，不会把下载批次写死进代码。
+
+**Q：现在能不能直接训练？**
+能。`python -m models.train --trials 30` 约 5 分钟；前置条件只有 4 个：面板 2015–2023 非空、标签 T+2 可对齐、特征与注册表同源、模型输入列齐全。`python -m scripts.check_data_readiness` 会逐项检查并在 BLOCK 时返回非零退出码（当前 PASS 26 / WARN 2 / BLOCK 0）。唯一未完成的是 2024 锁箱，需要 2026 年官方 ST 标签。
+
 **Q：SHAP 图里中文是方块？**
 本项目用 Plotly 重绘 SHAP 图，不依赖 matplotlib 字体配置；只有 `notebooks/` 中使用 matplotlib 时才需要设置 `font.sans-serif`。
 
@@ -422,12 +494,13 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | 阶段 | 状态 | 内容 |
 |------|------|------|
 | 数据采集与预处理 | ✅ | 爬虫骨架、ETL、演示数据生成器 |
-| 特征工程与筛选 | ✅ | 73 维特征、四步筛选、证据链报告 |
+| 数据治理与门禁 | ✅ | 落地区→暂存区→契约区三层、`sync_raw_download`、G0–G5 就绪体检、缺口清单 |
+| 特征工程与筛选 | ✅ | 80 维特征、四步筛选（→36 维）、证据链报告 |
 | 模型训练与评估 | ✅ | 五模型对比、Optuna、OOT 评估、分群一致性 |
 | SHAP 可解释性 | ✅ | 四维度分析 + 缓存 + Plotly 可视化 |
 | Streamlit 平台 | ✅ | 五大模块 + 报告导出 |
-| 工程化 | ✅ | 61 项测试、Docker、Makefile、文档自动生成 |
-| 待办 | ⬜ | 文本情感增量价值分组检验、在线增量更新、模型注册表（MLflow） |
+| 工程化 | ✅ | 67 项测试、Docker、Makefile、文档自动生成 |
+| 待办 | ⬜ | 2024 锁箱（等 2026 官方标签）、扣非/折旧/长期负债官方口径核验、2025 MD&A 文本、在线增量更新、模型注册表（MLflow） |
 
 ---
 
