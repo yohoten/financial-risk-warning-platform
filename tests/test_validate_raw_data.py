@@ -11,7 +11,7 @@ FILES = {
     "financial": "csmar_financial.csv",
     "governance": "csmar_governance.csv",
     "sentiment": "text_sentiment.csv",
-    "market": "market_features.csv",
+    "market": "market_features_trd.csv",
     "legal": "legal_events.csv",
     "labels": "labels_st.csv",
 }

@@ -74,12 +74,29 @@ def predict_codes(codes: list[str], year: int | None = None) -> pd.DataFrame:
     return predict_frame(subset).sort_values("st_prob", ascending=False)
 
 
+def _prediction_cache_matches(cached: pd.DataFrame) -> bool:
+    """缓存是否由当前模型生成：run_id 一致且模型特征齐全。
+
+    只判断文件是否存在会让"重训后看板仍显示旧概率"静默发生。
+    """
+    meta = load_meta()
+    current = str(meta.get("run_id", "unknown"))
+    features = meta.get("features") or []
+    if "run_id" in cached.columns:
+        runs = set(cached["run_id"].astype(str).unique())
+        if runs != {current}:
+            return False
+    return all(f in cached.columns for f in features)
+
+
 def load_panel_for_inference() -> pd.DataFrame:
-    """推理用面板：优先缓存，其次 feature_store。"""
+    """推理用面板：缓存与当前模型一致才复用，否则回退到特征面板重算。"""
     if resolve(settings.PREDICTION_PATH):
         cached = read_table(settings.PREDICTION_PATH)
-        if {"stock_code", "st_prob"}.issubset(cached.columns):
+        if {"stock_code", "st_prob"}.issubset(cached.columns) and _prediction_cache_matches(cached):
             return cached
+        logger.warning("预测缓存与当前模型不一致（run_id/特征），已忽略；"
+                       "请运行 python -m models.predict --refresh 刷新")
     panel = read_table(settings.FEATURE_MATRIX) if resolve(settings.FEATURE_MATRIX) else read_table(settings.FEATURE_PANEL)
     return panel
 
@@ -113,9 +130,13 @@ def _normalize_code_column(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_predictions() -> pd.DataFrame:
-    """读取评分缓存；不存在则即时计算。"""
+    """读取评分缓存；不存在或与当前模型不一致时重新打分。"""
     if resolve(settings.PREDICTION_PATH):
-        return _normalize_code_column(read_table(settings.PREDICTION_PATH))
+        cached = read_table(settings.PREDICTION_PATH)
+        if _prediction_cache_matches(cached):
+            return _normalize_code_column(cached)
+        logger.warning("评分缓存早于当前模型（run_id=%s），自动重新打分",
+                       load_meta().get("run_id", "unknown"))
     return refresh_predictions()
 
 
@@ -144,3 +165,24 @@ def company_profile(stock_code: str, year: int | None = None) -> dict:
         "history": company.sort_values("year")[["year", "st_prob", "risk_level"]].reset_index(drop=True),
         "features": latest,
     }
+
+
+def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="批量打分与评分缓存刷新")
+    parser.add_argument("--refresh", action="store_true", help="对全量面板重新打分并写缓存")
+    parser.add_argument("--codes", nargs="*", default=None, help="按股票代码打分")
+    args = parser.parse_args()
+
+    if args.refresh:
+        scored = refresh_predictions()
+        print(scored.head(3).to_string(index=False))
+    elif args.codes:
+        print(predict_codes(args.codes).head(20).to_string(index=False))
+    else:
+        print(load_predictions().head(3).to_string(index=False))
+
+
+if __name__ == "__main__":
+    main()

@@ -65,9 +65,48 @@ def compute_and_cache(max_samples: int | None = None) -> dict:
     return cache
 
 
-def load_cache() -> dict:
-    """读取 SHAP 缓存，不存在时自动计算。"""
-    if settings.SHAP_VALUES.exists():
+def cache_status() -> dict:
+    """缓存是否与当前模型同版本：run_id、特征数、样本数。"""
+    meta_path = settings.CACHE_DIR / "shap_meta.json"
+    meta = {}
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            meta = {}
+    model_meta = load_meta() if settings.MODEL_META.exists() else {}
+    expected_run = model_meta.get("run_id", "unknown")
+    n_model_features = int(model_meta.get("n_features", 0))
+    return {
+        "cache_exists": settings.SHAP_VALUES.exists(),
+        "cache_run_id": meta.get("run_id"),
+        "model_run_id": expected_run,
+        "cache_features": meta.get("n_features"),
+        "model_features": n_model_features,
+        "cache_samples": meta.get("n_samples"),
+        "is_current": bool(
+            settings.SHAP_VALUES.exists()
+            and meta.get("run_id") == expected_run
+            and int(meta.get("n_features", -1)) == n_model_features
+        ),
+    }
+
+
+def load_cache(force: bool = False) -> dict:
+    """读取 SHAP 缓存；缺失或与当前模型版本不一致时自动重算。
+
+    只比较文件是否存在会让"重训后仍用旧解释"静默发生，因此这里校验
+    `shap_meta.json` 中的 run_id 与特征数，不一致即重算并告警。
+    """
+    if force:
+        return compute_and_cache()
+    status = cache_status()
+    if status["cache_exists"] and not status["is_current"]:
+        logger.warning("SHAP 缓存与当前模型不一致（cache=%s / model=%s，特征 %s / %s），自动重算",
+                       status["cache_run_id"], status["model_run_id"],
+                       status["cache_features"], status["model_features"])
+        return compute_and_cache()
+    if status["cache_exists"]:
         return joblib.load(settings.SHAP_VALUES)
     return compute_and_cache()
 
@@ -104,7 +143,17 @@ def local_contribution(stock_code: str, year: int | None = None, top_n: int = 15
     values = cache["values"][pos]
     feature_values = cache["feature_values"][pos]
     base = cache["base_value"]
-    prob = float(1 / (1 + np.exp(-(base + values.sum()))))
+    raw_prob = float(1 / (1 + np.exp(-(base + values.sum()))))
+    # SHAP 加和给出的是未校准概率；对外展示需与风险卡片一致，故再过一遍校准器
+    try:
+        from models.calibration import load_calibrator
+
+        prob = float(np.asarray(load_calibrator().apply(np.array([raw_prob]))).ravel()[0])
+        calibrated = True
+    except Exception as exc:  # 校准器缺失/版本不兼容时退回原始概率，不阻断解释
+        logger.warning("校准器不可用，返回未校准概率：%s", exc)
+        prob = raw_prob
+        calibrated = False
 
     df = pd.DataFrame(
         {
@@ -123,6 +172,8 @@ def local_contribution(stock_code: str, year: int | None = None, top_n: int = 15
         "year": int(index.loc[pos, "year"]),
         "base_value": base,
         "prediction": prob,
+        "raw_probability": raw_prob,
+        "calibrated": calibrated,
         "contributions": df.head(top_n).drop(columns=["绝对值"]).reset_index(drop=True),
         "all_contributions": df.reset_index(drop=True),
     }
@@ -191,6 +242,27 @@ def four_dimension_summary() -> dict:
     }
 
 
-if __name__ == "__main__":
-    compute_and_cache()
+def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="TreeSHAP 四维度解释与缓存")
+    parser.add_argument("--force", action="store_true", help="忽略缓存强制重算")
+    parser.add_argument("--max-samples", type=int, default=None, help="只解释前 N 个样本（调试用）")
+    parser.add_argument("--check", action="store_true", help="只检查缓存是否与当前模型同版本")
+    args = parser.parse_args()
+
+    if args.check:
+        status = cache_status()
+        for key, value in status.items():
+            print(f"{key:16s} {value}")
+        raise SystemExit(0 if status["is_current"] else 1)
+
+    if args.force or args.max_samples:
+        compute_and_cache(max_samples=args.max_samples)
+    else:
+        load_cache()
     print(global_importance(10).to_string(index=False))
+
+
+if __name__ == "__main__":
+    main()

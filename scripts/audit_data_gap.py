@@ -22,6 +22,7 @@ from pathlib import Path
 import pandas as pd
 
 from config import feature_registry as fr
+from config import settings
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
@@ -91,13 +92,25 @@ def main() -> None:
     gov = gov.dropna(subset=KEY).copy()
     gov["year"] = gov["year"].astype(int)
 
-    market = read(RAW / "market_features.csv", dtype={"stock_code": str})
+    # 行情契约表（TRD 小数口径）；审计列为可空整型，读回不应退化为 float。
+    market_path = RAW / settings.RAW_MARKET.name
+    market = read(market_path, dtype={"stock_code": str, "audit_opinion": "Int8", "big4_audit": "Int8"})
     market["stock_code"] = code(market["stock_code"])
     market["year"] = pd.to_numeric(market["year"], errors="coerce")
     market = market.dropna(subset=KEY).copy()
     market["year"] = market["year"].astype(int)
 
-    # 日行情聚合候选：仅用于缺口判断，不写回在线 market_features.csv。
+    # 遗留百分数表已归档，仅用于单位对照，不再作为契约读取。
+    legacy_market_path = RAW / "market_features_legacy_percent.csv"
+    legacy_market = None
+    if legacy_market_path.exists():
+        legacy_market = read(legacy_market_path, dtype={"stock_code": str})
+        legacy_market["stock_code"] = code(legacy_market["stock_code"])
+        legacy_market["year"] = pd.to_numeric(legacy_market["year"], errors="coerce")
+        legacy_market = legacy_market.dropna(subset=KEY).copy()
+        legacy_market["year"] = legacy_market["year"].astype(int)
+
+    # 日行情聚合候选：与契约表同源，用于覆盖率与 2026 部分年度检查。
     trd = read(CAND / "TRD_Dly_company_year_2013_2026.csv", dtype={"Stkcd": str})
     trd["stock_code"] = code(trd["Stkcd"])
     trd["year"] = pd.to_numeric(trd["year"], errors="coerce")
@@ -105,16 +118,6 @@ def main() -> None:
     trd["year"] = trd["year"].astype(int)
     for col in ["trading_days", "annual_turnover", "stock_volatility", "annual_return"]:
         trd[col] = pd.to_numeric(trd[col], errors="coerce")
-
-    market_trd_path = RAW / "market_features_trd.csv"
-    market_trd = None
-    if market_trd_path.exists():
-        market_trd = read(market_trd_path, dtype={"stock_code": str})
-        market_trd["stock_code"] = code(market_trd["stock_code"])
-        market_trd["year"] = pd.to_numeric(market_trd["year"], errors="coerce")
-        market_trd = market_trd.dropna(subset=KEY).copy()
-        market_trd["year"] = market_trd["year"].astype(int)
-        market_trd["annual_turnover"] = pd.to_numeric(market_trd["annual_turnover"], errors="coerce")
 
     labels_proxy = read(RAW / "labels_st.csv", dtype={"stock_code": str})
     labels_official = read(CAND / "labels_st_official.csv", dtype={"stock_code": str})
@@ -147,9 +150,12 @@ def main() -> None:
         inventory_entry("财务主表", RAW / "csmar_financial.csv", fin, note="A 股公司-年，金额亿元"),
         inventory_entry("治理主表", RAW / "csmar_governance.csv", gov,
                         note=f"当前在线契约；duality 非空 {int(gov['duality'].notna().sum()):,}/{len(gov):,}" if "duality" in gov else "当前在线契约"),
-        inventory_entry("审计/市场表", RAW / "market_features.csv", market, note="审计意见/费用；换手率为百分数口径（约100×），待切换"),
-        *([inventory_entry("行情修正候选", market_trd_path, market_trd, note="TRD_Dly 小数口径；待评审后替换在线 market_features")] if market_trd is not None else []),
-        inventory_entry("日行情公司-年（候选）", CAND / "TRD_Dly_company_year_2013_2026.csv", trd, note="2013–2026 日行情聚合；候选，不写在线 market_features"),
+        inventory_entry("审计/市场表（契约）", market_path, market,
+                        note="审计意见/费用 + TRD 小数换手率；审计列为 Int8"),
+        *([inventory_entry("行情遗留表（归档）", legacy_market_path, legacy_market,
+                           note="百分数口径（约100×），仅作单位对照，不再读取")] if legacy_market is not None else []),
+        inventory_entry("日行情公司-年（候选）", CAND / "TRD_Dly_company_year_2013_2026.csv", trd,
+                        note="2013–2026 日行情聚合，与契约表同源"),
         inventory_entry("ST 在线标签", RAW / "labels_st.csv", labels_proxy, note="当前在线标签；本轮已与官方候选一致"),
         inventory_entry("ST 官方标签（候选）", CAND / "labels_st_official.csv", labels_official, note="未替换在线标签"),
         inventory_entry("治理增量（候选）", CAND / "governance_ext.csv", gov_ext, note="两职合一/董事会/管理层"),
@@ -344,19 +350,21 @@ def main() -> None:
     }
     trd_fin_keys = trd[trd["year"].between(2013, 2025)].merge(fin_a_keys, on=KEY, how="inner")
     trd_2026 = trd[trd["year"].eq(2026)]
-    active_turnover_median = float(pd.to_numeric(market["annual_turnover"], errors="coerce").median()) if "annual_turnover" in market else None
-    corrected_turnover_median = float(market_trd["annual_turnover"].median()) if market_trd is not None else None
+    contract_turnover_median = float(pd.to_numeric(market["annual_turnover"], errors="coerce").median()) if "annual_turnover" in market else None
+    legacy_turnover_median = float(pd.to_numeric(legacy_market["annual_turnover"], errors="coerce").median()) if legacy_market is not None else None
     market_cov = {
+        "path": market_path.relative_to(ROOT).as_posix(),
         "rows": int(len(market)),
         "annual_turnover_nonnull": float(market["annual_turnover"].notna().mean()) if "annual_turnover" in market else 0.0,
         "stock_volatility_nonnull": float(market["stock_volatility"].notna().mean()) if "stock_volatility" in market else 0.0,
         "audit_opinion_nonnull": float(market["audit_opinion"].notna().mean()) if "audit_opinion" in market else 0.0,
         "audit_opinion_nonzero": float((pd.to_numeric(market["audit_opinion"], errors="coerce").fillna(0) != 0).mean()) if "audit_opinion" in market else 0.0,
-        "active_turnover_median": active_turnover_median,
-        "corrected_turnover_median": corrected_turnover_median,
-        "active_to_corrected_ratio": float(active_turnover_median / corrected_turnover_median)
-        if active_turnover_median and corrected_turnover_median else None,
-        "active_unit_note": "在线换手率为百分数（约100×）；修正候选为 decimal turns/year",
+        "audit_opinion_dtype": str(market["audit_opinion"].dtype) if "audit_opinion" in market else None,
+        "contract_turnover_median": contract_turnover_median,
+        "legacy_turnover_median": legacy_turnover_median,
+        "legacy_to_contract_ratio": float(contract_turnover_median / legacy_turnover_median)
+        if contract_turnover_median and legacy_turnover_median else None,
+        "unit_note": "契约表为 decimal turns/year；遗留表已归档为百分数口径（约100×）",
         "candidate": {
             "rows": int(len(trd)),
             "companies": int(trd["stock_code"].nunique()),
@@ -367,7 +375,7 @@ def main() -> None:
             "financial_key_coverage_2013_2025": float(len(trd_fin_keys) / len(fin_a_keys)),
             "rows_2026": int(len(trd_2026)),
             "trading_days_2026_median": float(trd_2026["trading_days"].median()) if len(trd_2026) else None,
-            "note": "2026 仅至 9-30，部分年度；尚未写入 feature_store/panel_features.csv",
+            "note": "2026 仅至 9-30，部分年度；面板已按契约小数口径构建（缩尾后差异仅出现在边界）",
         },
     }
 

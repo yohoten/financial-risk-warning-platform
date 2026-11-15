@@ -83,7 +83,8 @@ with tab3:
         ).rename(columns={"feature_a": "特征A", "feature_b": "特征B"}),
         use_container_width=True, hide_index=True, height=300,
     )
-    insight("交互强度 = |SHAP 相关系数| × 重要性几何均值，用于快速定位需要联合解读的特征组合。")
+    insight("交互强度 = |SHAP 相关系数| × 重要性几何均值（代理指标，非 TreeSHAP 精确交互值，"
+            "后者为 O(T·L·D²)，演示场景过慢），用于快速定位需要联合解读的特征组合。")
 
 with tab4:
     metrics = D.load_metrics()

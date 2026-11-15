@@ -16,7 +16,7 @@ if str(ROOT) not in sys.path:
 from streamlit.testing.v1 import AppTest  # noqa: E402
 
 PAGES = [
-    "streamlit_app/app.py",
+    "streamlit_app/streamlit_app.py",
     "streamlit_app/pages/1_数据看板.py",
     "streamlit_app/pages/2_企业诊断.py",
     "streamlit_app/pages/3_批量预警.py",

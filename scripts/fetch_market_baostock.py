@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""从 Baostock 抓取个股年度换手率与年化波动率，补齐 market_features.csv。
+"""从 Baostock 抓取个股年度换手率与年化波动率，写入归档的遗留百分数表。
+
+契约表已切到 `settings.RAW_MARKET`（market_features_trd.csv，小数口径），
+本脚本只维护 `data/raw/market_features_legacy_percent.csv`，供审计对照。
+
 
 字段映射：
 - annual_turnover：年换手率（%）= 当年逐日换手率 turn 求和。
@@ -28,7 +32,7 @@ import pandas as pd
 YMIN, YMAX = 2013, 2025
 TRADING_DAYS = 252.0
 CACHE = "cache/market_baostock.parquet"
-OUT = "data/raw/market_features.csv"
+OUT = "data/raw/market_features_legacy_percent.csv"
 SLEEP_BETWEEN = 0.5          # 每只之间间隔，避免触发限流
 MAX_RETRY = 3                # 单只失败重试次数
 SAVE_EVERY = 100             # 每 N 只落盘一次断点

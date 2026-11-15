@@ -7,9 +7,14 @@ annual_turnover : decimal turns per year (sum of daily shares traded / free-floa
                   values (100x), so it is replaced rather than mixed.
 stock_volatility: annualised standard deviation of daily returns, decimal.
 
-The audit-opinion columns are kept from the old active table; the market
-columns are replaced by the candidate TRD table.  ``market_available`` marks
-whether a TRD company-year record exists.
+The audit-opinion columns are kept from the archived legacy table
+(``market_features_legacy_percent.csv``, percent-scale, audit comparison only);
+the market columns are replaced by the candidate TRD table.  ``market_available``
+marks whether a TRD company-year record exists.
+
+Audit flags are written as nullable ``Int8`` (blank cell = no audit record,
+not "standard opinion").  CSV cannot persist the nullable dtype, so readers
+must pass ``dtype={"audit_opinion": "Int8", "big4_audit": "Int8"}``.
 """
 
 from __future__ import annotations
@@ -25,7 +30,7 @@ from config import settings
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
-LEGACY_MARKET = RAW / "market_features.csv"  # audit-only legacy table; never write it
+LEGACY_MARKET = RAW / "market_features_legacy_percent.csv"  # archived percent-scale table; audit only
 OUT = RAW / "market_features_trd.csv"
 CAND = RAW / "candidates" / "TRD_Dly_company_year_2013_2026.csv"
 AUDIT_COLS = ["audit_opinion", "big4_audit", "audit_fee"]
@@ -69,6 +74,11 @@ def build() -> pd.DataFrame:
     out = out.drop(columns=["_merge"])
     out["market_source"] = "CSMAR.TRD_Dly.company_year"
     out["turnover_unit"] = "decimal_turns_per_year"
+    # 审计标记为可空整型：空 = 无审计记录，不等同于“标准意见 0”。
+    for col in ("audit_opinion", "big4_audit"):
+        if col in out.columns:
+            out[col] = pd.to_numeric(out[col], errors="coerce").astype("Int8")
+    out["market_available"] = pd.to_numeric(out["market_available"], errors="coerce").fillna(0).astype("int8")
     out = out.sort_values(["stock_code", "year"]).reset_index(drop=True)
 
     print(f"active audit rows: {len(audit):,}; TRD rows: {len(trd):,}; union: {len(out):,}")
@@ -96,7 +106,10 @@ def main() -> None:
         "annual_turnover_median": float(out["annual_turnover"].median()),
         "annual_turnover_p99": float(out["annual_turnover"].quantile(0.99)),
         "stock_volatility_median": float(out["stock_volatility"].median()),
-        "source": "CSMAR.TRD_Dly (2013-2026) + prior audit columns",
+        "source": "CSMAR.TRD_Dly (2013-2026) + archived legacy audit columns",
+        "legacy_source": settings.rel(LEGACY_MARKET),
+        "audit_dtypes": {"audit_opinion": "Int8", "big4_audit": "Int8"},
+        "read_hint": 'dtype={"audit_opinion": "Int8", "big4_audit": "Int8"}',
     }
     profile = path.with_suffix(path.suffix + ".profile.json")
     profile.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -48,6 +48,12 @@ tqdm==4.66.1
 loguru==0.7.2
 apscheduler==3.10.4
 
+# ---------- API 服务（FastAPI 后端，可选）----------
+fastapi==0.115.6
+pydantic==2.10.4
+uvicorn[standard]==0.34.0
+httpx==0.28.1          # TestClient / 前端调用后端
+
 # ---------- 开发与测试 ----------
 pytest==7.4.4
 ruff==0.1.14

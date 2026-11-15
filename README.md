@@ -144,6 +144,22 @@ docker save risk-warning-platform:1.0 -o risk_platform_v1.0.tar
 docker load < risk_platform_v1.0.tar && docker compose up -d
 ```
 
+### 方式四：FastAPI 服务（可选，供多端复用）
+
+Streamlit 默认本地直连领域层；需要服务化时启动 FastAPI 后端：
+
+```bash
+uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+# 或 docker compose up -d api
+curl http://localhost:8000/health
+curl -X POST http://localhost:8000/predict/codes -H "Content-Type: application/json" \
+     -d '{"codes":["000004"],"year":2023}'
+```
+
+- 契约：`docs/FastAPI服务层设计.md`；三层架构与图表方案：`docs/前端架构与图表方案.md`；功能/预测/UI 设计：`docs/平台功能与预测设计.md`。
+- 前端切远程：设置 `RISK_API_URL=http://localhost:8000`（`utils/backend.py` 自动 API 优先、失败回退本地）。
+- 图表：默认 Plotly；把 `echarts.min.js` 放入 `streamlit_app/components/echarts_local/` 后，数据看板可切换 ECharts（离线本地渲染，不依赖 CDN）。
+
 ---
 
 ## 🏗️ 系统架构
@@ -238,6 +254,10 @@ flowchart LR
 ```
 financial-risk-warning-platform/
 ├── DATA_RAW_Download/            # 📦 下载落地区（只读、不入库）：CSMAR 原始包原样存放
+├── api/                          # 🔌 FastAPI 服务层：评分/解释/监控 HTTP 接口
+│   ├── main.py                   #   FastAPI 入口 + 路由
+│   ├── schemas.py                #   Pydantic 请求模型
+│   └── services.py               #   领域层薄封装（models/* → JSON）
 ├── config/                       # ⚙️ 全局配置（唯一事实来源）
 │   ├── settings.py               #   路径（含落地区/暂存区）、样本窗口、阈值、随机种子
 │   └── feature_registry.py       #   80 维特征元数据（中英文名/维度/方向/口径）
@@ -414,8 +434,13 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 
 实现要点：
 
+- **真正应用 TreeSHAP**：`shap.TreeExplainer(xgboost_final.json)` 直接解释主模型，输出**精确** Shapley 值，
+  满足 `base_value + ΣSHAP = logit` 的可加性；当前缓存 22,814 样本 × 36 特征，`base_value = 0.1105`（log-odds）；
+- **缓存带版本校验**：`cache/shap_meta.json` 记录 `run_id` 与特征数，模型重训后自动判定失效并重算，
+  避免"新模型配旧解释"；`python -m models.shap_analysis --check` 可查一致性（不一致退出码 1）；
+- **瀑布图末端概率已校准**：`local_contribution` 同时返回未校准 `raw_probability` 与校准后 `prediction`，
+  与风险评级卡片口径一致（实测与 `predict_codes` 的 `st_prob` 差值为 0）；
 - **Plotly 重绘 SHAP 图**，中文字体零配置、无方块字，且保留悬停/缩放交互；
-- **计算一次、缓存复用**：`cache/shap_values.pkl` 存纯 numpy 数组，避免 pickle 解释器对象跨版本失效；
 - **交互强度用代理指标**（重要性加权相关系数），因为精确 SHAP interaction 为 O(T·L·D²)，演示场景过慢——这一取舍在文档与界面中均显式标注。
 
 ---
@@ -430,7 +455,7 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | 3. 特征工程 | `python -m etl.run_pipeline` | `panel_features.parquet`（22,814×96）、`selected_features.json`（36 维） |
 | 4. 训练 | `python -m models.train --trials 30` | `xgboost_final.json`、`metrics.json`、`run_manifest.json` |
 | 5. 评估 | `python -m models.evaluate` | `evaluation_report.md`、校准/分群 CSV |
-| 6. 解释 | `python -m models.shap_analysis` | `shap_values.pkl` |
+| 6. 解释 | `python -m models.shap_analysis`（`--check` 校验缓存版本） | `shap_values.pkl`、`cache/shap_meta.json` |
 | 7. 监控 | `python -m models.monitor` | `monitor_report.json`、`psi_detail.csv` |
 | 8. 平台 | `streamlit run streamlit_app/app.py` | 五大模块可交互 |
 | 9. 测试 | `python -m pytest -q` | 67 passed |
@@ -454,6 +479,13 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | [`docs/数据缺口与补齐清单_20261114.md`](./docs/数据缺口与补齐清单_20261114.md) | **最新口径**：12 项缺口、补齐动作、验收标准、可训练性判定 |
 | [`docs/数据治理与目录规范.md`](./docs/数据治理与目录规范.md) | 分层目录、命名规范、处理/清洗规则、G0–G5 质量门、候选激活流程 |
 | [`docs/训练评估口径与模型选择.md`](./docs/训练评估口径与模型选择.md) | 选型规则、指标口径、五模型验证/测试对比、30 vs 50 trials 过拟合证据 |
+| [`docs/平台功能与预测设计.md`](./docs/平台功能与预测设计.md) | 功能/预测/UI 设计、预测契约、现状缺陷清单、路线图 |
+| [`docs/FastAPI服务层设计.md`](./docs/FastAPI服务层设计.md) | API 契约、异常映射、部署、与前端集成方案 |
+| [`docs/前端架构与图表方案.md`](./docs/前端架构与图表方案.md) | Streamlit 壳 + FastAPI 服务层 + Plotly/ECharts 混合渲染、ECharts 本地化 |
+| [`docs/论文_系统设计与实现.md`](./docs/论文_系统设计与实现.md) | **论文正文稿**：第 5 章 系统设计与实现（总体架构/前端/服务/图表/选型） |
+| [`docs/论文_第1-4章.md`](./docs/论文_第1-4章.md) | **论文正文稿**：第 1–4 章（绪论含文献综述/相关技术/数据与特征/模型） |
+| [`docs/论文_参考文献.md`](./docs/论文_参考文献.md) | **论文参考文献**：GB/T 7714，正文 [1]–[14] 对应 |
+| [`docs/论文_全文.docx`](./docs/论文_全文.docx) | **论文 Word 版**：封面 + 原创性声明 + 第 1–5 章 + 参考文献，含目录、A4、宋体/黑体、三线表 |
 | [`docs/数据字典与特征口径.md`](./docs/数据字典与特征口径.md) | 80 维特征定义、数据表结构、缺失处理规则 |
 | [`docs/文献与资料调研清单.md`](./docs/文献与资料调研清单.md) | 49 项文献/代码/数据资源清单、检索策略、获取状态与缺口 |
 | [`docs/README_资源批量下载工具.md`](./docs/README_资源批量下载工具.md) | 批量下载工具使用说明 |

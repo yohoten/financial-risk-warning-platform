@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""从东方财富历史 K 线接口抓取个股年度换手率与年化波动率，补齐 market_features.csv。
+"""从东方财富历史 K 线接口抓取个股年度换手率与年化波动率，写入归档的遗留百分数表。
+
+契约表已切到 `settings.RAW_MARKET`（market_features_trd.csv，小数口径），
+本脚本只维护 `data/raw/market_features_legacy_percent.csv`，供审计对照。
+
 
 字段映射（东财 K 线 fields2=f51..f61）：
 - f51 = 日期, f59 = 涨跌幅(%), f61 = 换手率(%)
@@ -27,7 +31,7 @@ import requests
 YMIN, YMAX = 2013, 2025
 TRADING_DAYS = 252.0
 CACHE = "cache/market_eastmoney.parquet"
-OUT = "data/raw/market_features.csv"
+OUT = "data/raw/market_features_legacy_percent.csv"
 HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"}
 KLINE = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
 

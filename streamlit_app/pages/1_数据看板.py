@@ -14,6 +14,7 @@ import streamlit as st
 
 from streamlit_app.components.layout import kpi_row, page_header
 from streamlit_app.utils import charts, data as D
+from streamlit_app.utils import echarts_options as E
 from streamlit_app.utils.styles import footer, insight, setup_page
 
 setup_page("数据看板", "📊")
@@ -37,20 +38,36 @@ kpi_row(
 )
 
 st.markdown("---")
+
+# 图表引擎选配：本地 echarts.min.js 存在时才出现切换开关，默认 Plotly
+engine = "Plotly"
+if E.has_echarts():
+    engine = st.radio("图表引擎", ["Plotly", "ECharts"], horizontal=True,
+                      label_visibility="collapsed")
+
 tab1, tab2, tab3 = st.tabs(["🌡️ 行业态势", "📈 时间趋势", "🏭 企业排行"])
 
 with tab1:
     left, right = st.columns([1.2, 1])
     with left:
-        st.plotly_chart(charts.industry_risk_bar(latest), use_container_width=True)
+        if engine == "ECharts":
+            E.render_echarts(E.industry_risk_bar_option(latest), height=400, key="e_irb")
+        else:
+            st.plotly_chart(charts.industry_risk_bar(latest), use_container_width=True)
     with right:
         st.plotly_chart(charts.risk_distribution(latest), use_container_width=True)
-    st.plotly_chart(charts.industry_year_heatmap(scored), use_container_width=True)
+    if engine == "ECharts":
+        E.render_echarts(E.industry_year_heatmap_option(scored), height=420, key="e_heat")
+    else:
+        st.plotly_chart(charts.industry_year_heatmap(scored), use_container_width=True)
     insight("读法：颜色越深代表该行业当年平均 ST 概率越高；纵向对比可发现行业性风险周期，"
             "横向对比用于识别相对更脆弱的行业。")
 
 with tab2:
-    st.plotly_chart(charts.st_trend(scored), use_container_width=True)
+    if engine == "ECharts":
+        E.render_echarts(E.st_trend_option(scored), height=380, key="e_trend")
+    else:
+        st.plotly_chart(charts.st_trend(scored), use_container_width=True)
     yearly = (
         scored.groupby("year")
         .agg(企业数=("stock_code", "nunique"), 实际ST=("is_st", "sum"), 平均概率=("st_prob", "mean"),

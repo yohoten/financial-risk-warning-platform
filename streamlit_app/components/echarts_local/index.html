@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="./echarts.min.js"></script>
+  <style>
+    html, body, #chart { margin: 0; padding: 0; width: 100%; height: 100%; }
+    #error { font-family: "Microsoft YaHei", sans-serif; color: #b91c1c;
+             padding: 16px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+  <div id="error" style="display:none"></div>
+
+  <script>
+    const chartEl = document.getElementById("chart");
+    const errorEl = document.getElementById("error");
+
+    function post(type, payload) {
+      window.parent.postMessage({ isStreamlitMessage: true, type: type, ...payload }, "*");
+    }
+
+    function setHeight(h) {
+      post("streamlit:setFrameHeight", { height: h });
+    }
+
+    let chart = null;
+
+    function render(args) {
+      if (typeof echarts === "undefined") {
+        errorEl.style.display = "block";
+        errorEl.textContent = "缺少本地 echarts.min.js，请按组件 README 下载后放入 streamlit_app/components/echarts_local/。";
+        setHeight(64);
+        return;
+      }
+      errorEl.style.display = "none";
+      const option = args.option || {};
+      const height = args.height || 400;
+      const events = args.events || [];
+
+      if (!chart) {
+        chart = echarts.init(chartEl, null, { renderer: "canvas" });
+        events.forEach(function (ev) {
+          chart.on(ev, function (params) {
+            post("streamlit:setComponentValue", { value: { event: ev, params: params } });
+          });
+        });
+        window.addEventListener("resize", function () { chart && chart.resize(); });
+      }
+      chart.setOption(option, true);
+      chart.resize({ height: height });
+      setHeight(height);
+    }
+
+    window.addEventListener("message", function (event) {
+      const data = event.data;
+      if (!data || data.isStreamlitMessage !== true) return;
+      if (data.type === "streamlit:render") {
+        render(data.args || {});
+      }
+    });
+
+    post("streamlit:componentReady", { apiVersion: 1 });
+    setHeight(400);
+  </script>
+</body>
+</html>

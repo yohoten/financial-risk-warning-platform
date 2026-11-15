@@ -161,6 +161,11 @@ SAMPLE_INDUSTRY_PREFIXES = ("C",)
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 DEMO_MODE = os.getenv("DEMO_MODE", "1") == "1"
 
+# FastAPI 服务层：设置后前端数据访问走 HTTP，否则本地直连领域层。
+# 例：RISK_API_URL=http://localhost:8000
+RISK_API_URL = os.getenv("RISK_API_URL", "").rstrip("/")
+RISK_API_TIMEOUT = float(os.getenv("RISK_API_TIMEOUT", "10"))
+
 
 def ensure_dirs() -> None:
     """创建运行期必需目录（幂等）。"""

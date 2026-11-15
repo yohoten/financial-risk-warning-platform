@@ -1,8 +1,9 @@
 """Build company-year market features from CSMAR TRD_Dly (日个股回报率).
 
 The raw daily export is kept in data/incoming; this compact company-year table
-is the candidate feature input.  It deliberately does not overwrite
-data/raw/market_features.csv.
+is the candidate feature input.  The promoted contract is
+data/raw/market_features_trd.csv (see scripts/build_market_features.py); the old
+percent-scale table is archived as market_features_legacy_percent.csv.
 
 Definitions
 -----------

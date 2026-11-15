@@ -75,7 +75,8 @@ with right:
             use_container_width=True,
         )
         insight("红色向右为推高风险的因子，绿色向左为降低风险的因子；"
-                "数值为 log-odds 贡献，绝对值越大影响越强。")
+                "柱长为 log-odds 贡献，绝对值越大影响越强；末端概率已过校准器，"
+                "与风险评级卡片口径一致。")
     except Exception as exc:
         st.warning(f"SHAP 归因不可用：{exc}")
         st.info("请先运行 `python -m models.shap_analysis` 生成解释缓存。")

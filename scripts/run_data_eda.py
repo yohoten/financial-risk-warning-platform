@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import matplotlib
@@ -21,6 +22,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.ticker import PercentFormatter
+
+from config import settings
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
@@ -106,12 +109,22 @@ def winsorize(s: pd.Series, lower: float = 0.01, upper: float = 0.99) -> pd.Seri
     return x.clip(lo, hi)
 
 
+_MPL_VERSION = tuple(int(p) for p in re.match(r"(\d+)\.(\d+)", matplotlib.__version__).groups())
+# matplotlib>=3.9 将 boxplot 的 labels 参数更名为 tick_labels
+BOX_LABEL_KWARG = "tick_labels" if _MPL_VERSION >= (3, 9) else "labels"
+
+
+def st_boxplot(ax, groups: list[pd.Series]) -> dict:
+    return ax.boxplot(groups, **{BOX_LABEL_KWARG: ["非 ST", "ST"]}, patch_artist=True,
+                      showfliers=False, widths=0.55,
+                      medianprops={"color": "white", "linewidth": 1.3})
+
+
 def plot_box(ax, df: pd.DataFrame, col: str, title: str) -> None:
     x = pd.to_numeric(df[col], errors="coerce")
     x = x.clip(x.quantile(0.01), x.quantile(0.99))
     groups = [x[df["is_st"].eq(0)].dropna(), x[df["is_st"].eq(1)].dropna()]
-    bp = ax.boxplot(groups, tick_labels=["非 ST", "ST"], patch_artist=True, showfliers=False,
-                    widths=0.55, medianprops={"color": "white", "linewidth": 1.3})
+    bp = st_boxplot(ax, groups)
     for patch, color in zip(bp["boxes"], [COLORS["light_blue"], COLORS["orange"]]):
         patch.set_facecolor(color)
         patch.set_alpha(0.9)
@@ -173,7 +186,9 @@ def load_data() -> dict:
               "non_cny_count", "legal_event_count", "has_lawsuit", "has_penalty"]:
         legal[c] = pd.to_numeric(legal[c], errors="coerce")
 
-    market = read(RAW / "market_features.csv", dtype={"stock_code": str})
+    # 行情契约表（小数口径）；审计列为可空整型，避免读回成 float。
+    market = read(settings.RAW_MARKET, dtype={"stock_code": str, "audit_opinion": "Int8",
+                                              "big4_audit": "Int8"})
     market["stock_code"] = code(market["stock_code"])
     market["year"] = pd.to_numeric(market["year"], errors="coerce")
     market = market.dropna(subset=KEY).copy()
@@ -563,8 +578,7 @@ def plot_market(base: pd.DataFrame) -> None:
         x = pd.to_numeric(base[col], errors="coerce")
         x = x.clip(x.quantile(0.01), x.quantile(0.99))
         groups = [x[base["is_st"].eq(0)].dropna(), x[base["is_st"].eq(1)].dropna()]
-        bp = ax.boxplot(groups, tick_labels=["非 ST", "ST"], patch_artist=True, showfliers=False,
-                        widths=0.55, medianprops={"color": "white", "linewidth": 1.3})
+        bp = st_boxplot(ax, groups)
         for patch, color in zip(bp["boxes"], [COLORS["light_blue"], COLORS["orange"]]):
             patch.set_facecolor(color)
             patch.set_alpha(0.9)
@@ -658,7 +672,8 @@ def main() -> None:
             "turnover_coverage_2013_2025": float(base["annual_turnover"].notna().mean()),
             "volatility_coverage_2013_2025": float(base["stock_volatility"].notna().mean()),
             "by_st": mkt_tab.to_dict("records"),
-            "note": "TRD_Dly 候选已可用，但尚未写入 feature_store/panel_features.csv，也未重训模型；2026 为部分年度。",
+            "note": "行情契约已切到 market_features_trd.csv（小数口径）；面板与 TRD 候选 Spearman≈1；2026 为部分年度。",
+            "contract": settings.rel(settings.RAW_MARKET),
         },
         "cashflow_source": data["cashflow_source"],
         "figures": sorted(p.name for p in FIG.glob("eda_*.png")),
@@ -668,7 +683,7 @@ def main() -> None:
             "在线 labels_st.csv 已与官方 ST 标签一致（48,290 行、1,897 正）；2026 标签仍缺失。",
             "2024 锁箱是特征年 2024，需要 2026 标签；当前无 2026 公司-年键，不能评估。",
             "EDA 使用候选现金流修正值；在线 csmar_financial.csv 已处于同一量级，但模型产物尚未重跑。",
-            "TRD_Dly 公司-年行情为候选输入，尚未合并进特征面板；在线 market_features 仍为百分数口径（约100×），本图使用小数口径候选；2026 年仅至 9-30，未纳入年度对比图。",
+            "行情契约已切到 market_features_trd.csv（小数口径，原百分数表已归档为 market_features_legacy_percent.csv）；2026 年仅至 9-30（约 181 个交易日），未纳入年度对比图。",
         ],
     }
     (OUT / "eda_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
