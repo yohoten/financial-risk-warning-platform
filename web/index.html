@@ -4,10 +4,172 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>财务风险智能预警平台</title>
+
+    <title>财务风险智能预警平台 · FRW</title>
+    <meta
+      name="description"
+      content="基于 XGBoost + SHAP 的上市公司财务风险智能预警平台：数据看板、企业诊断、批量预警、模型解释与报告导出。"
+    />
+    <meta
+      name="keywords"
+      content="财务风险预警, XGBoost, SHAP, 信用风险, A股, 制造业, 风险看板"
+    />
+    <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f4f6fb" media="(prefers-color-scheme: light)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="财务风险智能预警平台" />
+    <meta
+      property="og:description"
+      content="基于 XGBoost + SHAP 的上市公司财务风险智能预警平台"
+    />
+
+    <!-- 主题引导：先于应用代码执行，避免深色用户遭遇白屏闪变 -->
+    <script>
+      document.documentElement.dataset.theme =
+        localStorage.getItem('frw-theme') === 'light' ? 'light' : 'dark'
+    </script>
+    <style>
+      /* 关键内联样式：首帧即渲染正确底色，不等外部 CSS */
+      html {
+        background: #0b1220;
+      }
+      html[data-theme='light'] {
+        background: #f4f6fb;
+      }
+      body {
+        margin: 0;
+      }
+
+      /* 品牌启动屏：Vue 挂载时会清空 #app，无需手动移除 */
+      #app > .boot {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+        font-family: 'Microsoft YaHei', 'PingFang SC', system-ui, 'Segoe UI', sans-serif;
+        color: #94a3b8;
+        background: #0b1220;
+      }
+      html[data-theme='light'] #app > .boot {
+        color: #6b7280;
+        background: #f4f6fb;
+      }
+
+      .boot-mark {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #2563eb, #06b6d4);
+        color: #fff;
+        font-size: 30px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: boot-pulse 2.2s ease-in-out infinite;
+      }
+
+      .boot-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: #e2e8f0;
+        letter-spacing: 2px;
+      }
+      html[data-theme='light'] .boot-title {
+        color: #1f2937;
+      }
+
+      .boot-sub {
+        font-size: 11px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        opacity: 0.7;
+      }
+
+      .boot-bar {
+        width: 180px;
+        height: 3px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.18);
+        overflow: hidden;
+      }
+      .boot-bar::after {
+        content: '';
+        display: block;
+        width: 40%;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #2563eb, #06b6d4);
+        animation: boot-slide 1.2s ease-in-out infinite;
+      }
+
+      .boot-error {
+        display: none;
+        max-width: 420px;
+        padding: 14px 18px;
+        border: 1px solid rgba(220, 38, 38, 0.35);
+        border-radius: 10px;
+        background: rgba(220, 38, 38, 0.08);
+        color: #dc2626;
+        font-size: 13px;
+        line-height: 1.7;
+        text-align: center;
+      }
+
+      @keyframes boot-pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.35);
+        }
+        50% {
+          box-shadow: 0 0 0 14px rgba(37, 99, 235, 0);
+        }
+      }
+      @keyframes boot-slide {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(350%);
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div class="boot">
+        <div class="boot-mark">风</div>
+        <div style="text-align: center">
+          <div class="boot-title">财务风险智能预警平台</div>
+          <div class="boot-sub">Financial Risk Warning Platform</div>
+        </div>
+        <div class="boot-bar"></div>
+        <div class="boot-error" id="boot-error">
+          应用加载时间过长：请确认已执行 <code>npm run build</code> 且
+          <code>dist/</code> 已部署，或检查后端服务与网络后刷新重试。
+        </div>
+      </div>
+    </div>
+    <noscript>
+      <div
+        style="
+          padding: 48px 24px;
+          text-align: center;
+          font-family: 'Microsoft YaHei', system-ui, sans-serif;
+        "
+      >
+        本平台需要启用 JavaScript 才能运行，请在浏览器设置中开启后刷新页面。
+      </div>
+    </noscript>
+    <script>
+      // 兜底：模块加载失败/过慢时给出可诊断的提示
+      setTimeout(function () {
+        var el = document.getElementById('boot-error')
+        if (el) el.style.display = 'block'
+      }, 15000)
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

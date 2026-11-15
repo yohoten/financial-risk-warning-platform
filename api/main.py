@@ -12,10 +12,13 @@ import os
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from api import services
 from api.schemas import CodesRequest, FrameRequest
+from api.services import alerts as alerts_service
+from api.services import finance as finance_service
+from api.services import rules as rules_service
 
 app = FastAPI(
     title="财务风险智能预警平台 API",
@@ -40,6 +43,13 @@ async def _unavailable(_: Request, exc: services.ServiceUnavailable) -> JSONResp
 @app.exception_handler(Exception)
 async def _internal(_: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=500, content={"detail": f"{type(exc).__name__}: {exc}"})
+
+
+def _or_404(result: dict) -> dict:
+    """领域层以 {'error': ...} 表示"未找到"，统一转 404。"""
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
 
 
 @app.get("/health")
@@ -101,3 +111,74 @@ def monitor_report() -> dict:
 @app.get("/features")
 def features() -> dict:
     return services.feature_dictionary()
+
+
+# ---------------------------------------------------------------------------
+# 财务分析（阶段 1 移植）
+# ---------------------------------------------------------------------------
+
+@app.get("/finance/overview")
+def finance_overview(years: int = Query(default=5, ge=1, le=20)) -> dict:
+    return finance_service.overview(years)
+
+
+@app.get("/finance/{code}/analysis")
+def finance_analysis(code: str, years: int = Query(default=5, ge=1, le=20),
+                     peers: bool = Query(default=True)) -> dict:
+    return _or_404(finance_service.analysis(code, years, peers))
+
+
+@app.get("/finance/{code}/report")
+def finance_report(code: str, years: int = Query(default=5, ge=1, le=20)) -> Response:
+    return Response(content=finance_service.report_markdown(code, years),
+                    media_type="text/markdown; charset=utf-8")
+
+
+# ---------------------------------------------------------------------------
+# 规则六维评分（阶段 1 移植）
+# ---------------------------------------------------------------------------
+
+@app.get("/risk/rules/{code}")
+def risk_rules(code: str) -> dict:
+    return _or_404(rules_service.rules_verdict(code))
+
+
+# ---------------------------------------------------------------------------
+# 预警闭环（阶段 1 移植）
+# ---------------------------------------------------------------------------
+
+@app.get("/alerts")
+def alerts(status: str | None = Query(default=None),
+           level: str | None = Query(default=None),
+           stock_code: str | None = Query(default=None),
+           limit: int = Query(default=200, ge=1, le=1000)) -> dict:
+    return alerts_service.list_alerts(status, level, stock_code, limit)
+
+
+@app.get("/alerts/summary")
+def alerts_summary() -> dict:
+    return alerts_service.summary()
+
+
+@app.post("/alerts/generate")
+def alerts_generate(payload: dict | None = None) -> dict:
+    stock_code = (payload or {}).get("stock_code")
+    if stock_code:
+        return _or_404(alerts_service.generate_for_enterprise(str(stock_code)))
+    return alerts_service.generate_all()
+
+
+@app.post("/alerts/{alert_id}/handle")
+def alerts_handle(alert_id: int, payload: dict) -> dict:
+    return alerts_service.handle_alert(
+        alert_id,
+        str((payload or {}).get("action", "")),
+        str((payload or {}).get("handler", "")),
+        str((payload or {}).get("note", "")),
+    )
+
+
+@app.get("/alerts/{alert_id}/report")
+def alerts_report(alert_id: int) -> Response:
+    return Response(content=alerts_service.report_markdown(alert_id),
+                    media_type="text/markdown; charset=utf-8")
