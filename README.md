@@ -7,13 +7,13 @@
 [![Streamlit](https://img.shields.io/badge/streamlit-1.29-FF4B4B.svg)](https://streamlit.io/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-2.0-green.svg)](https://xgboost.readthedocs.io/)
 [![SHAP](https://img.shields.io/badge/SHAP-0.45-orange.svg)](https://shap.readthedocs.io/)
-[![Tests](https://img.shields.io/badge/tests-67%20passed-brightgreen.svg)](./tests)
+[![Tests](https://img.shields.io/badge/tests-76%20passed-brightgreen.svg)](./tests)
 
 ---
 
 ## 📌 项目简介
 
-传统 Z-score、Logistic 回归在非线性关系捕捉与多维信息融合上存在局限，深度学习等"黑箱"模型又难以满足金融监管对可解释性的刚性要求。本项目以**沪深 A 股制造业上市公司**为研究对象，构建覆盖**偿债、盈利、营运、成长、现金流、文本情感、公司治理、审计市场司法、宏观行业、数字化转型**十大维度的特征体系（80 维候选、四步筛选后 36 维入选），以 **XGBoost** 为主模型，通过 **TreeSHAP** 实现四维度可解释性分析，并用 **Streamlit** 落地为五大模块的交互式预警平台。
+传统 Z-score、Logistic 回归在非线性关系捕捉与多维信息融合上存在局限，深度学习等"黑箱"模型又难以满足金融监管对可解释性的刚性要求。本项目以**沪深 A 股制造业上市公司**为研究对象，构建覆盖**偿债、盈利、营运、成长、现金流、文本情感、公司治理、审计市场司法、宏观行业、数字化转型**十大维度的特征体系（80 维候选、四步筛选后 36 维入选），以 **XGBoost** 为主模型，通过 **TreeSHAP** 实现四维度可解释性分析，并提供**双前端**落地：**Streamlit**（快速原型、离线可用）与 **Vue 3 + FastAPI**（生产化前后端，`web/` + `api/`）。
 
 **核心主张**：在保证预测精度（OOT AUC ≥ 0.85、KS ≥ 0.40）的同时，让每一个风险评分都可被拆解、审计与追溯。
 
@@ -36,7 +36,9 @@
 | 📋 **批量预警** | 粘贴代码 / 上传 CSV、阈值实时调节、风险等级分布、Excel/CSV 一键导出 |
 | 🔍 **模型解释** | 全局重要性（特征 + 维度双视角）、依赖效应、交互强度、五模型对比、校准曲线、PSI 漂移监控 |
 | 📄 **报告导出** | 单企业 PDF 诊断报告（内置中文字体，无外部依赖）、批量 Excel（含汇总 Sheet）、评估报告、数据字典 |
-| ⚙️ **工程能力** | 一键 Docker 部署、67 项单元测试、四步特征筛选证据链、概率校准与成本阈值、模型元信息与运行清单留痕（数据/特征 hash、参数、阈值） |
+| ⚙️ **工程能力** | 一键 Docker 部署、76 项单元测试、四步特征筛选证据链、概率校准与成本阈值、模型元信息与运行清单留痕（数据/特征 hash、参数、阈值） |
+| 🔌 **FastAPI 服务层** | 评分/解释/监控 + 财务分析/规则评分/预警闭环 HTTP 接口（`api/`），前端可 API 优先、失败回退本地 |
+| 🖥️ **Vue 3 前端** | 数据看板/企业列表/企业诊断/预警中心/模型解释/财务分析/报告导出 七视图 SPA（Vite + TypeScript + ECharts） |
 
 ---
 
@@ -59,7 +61,7 @@ python -m models.evaluate
 python -m models.shap_analysis
 
 # 4. 启动平台
-streamlit run streamlit_app/app.py
+streamlit run streamlit_app/streamlit_app.py
 # 浏览器打开 http://localhost:8501
 ```
 
@@ -68,7 +70,7 @@ streamlit run streamlit_app/app.py
 ```bash
 make all      # data → pipeline → train → evaluate → shap（仅空目录演示）
 make app      # 启动平台
-make test     # 67 项单元测试
+make test     # 76 项单元测试
 ```
 
 > 已有真实数据时 **不要** 跑 `make all`：`data.gen_demo_data` 会检测到 `data/raw/csmar_financial.csv` 并拒绝覆盖（确需覆盖加 `--force`，会先备份到 `data/demo_raw/backup_*`）。真实数据链路用 `make pipeline` 起。
@@ -112,7 +114,7 @@ python -m etl.mapping --source D:\csmar\export --dry-run
 python -m etl.mapping --source D:\csmar\export --write
 ```
 
-**当前真实数据状态（2026-11-14，已通过就绪体检：PASS 26 / WARN 2 / BLOCK 0）**
+**当前真实数据状态（2026-11-15，已通过就绪体检：PASS 26 / WARN 1 / BLOCK 0，唯一 WARN 为 2024 锁箱待 2026 标签）**
 
 | 项 | 数值 |
 |---|---|
@@ -125,7 +127,7 @@ python -m etl.mapping --source D:\csmar\export --write
 | 2023 留出测试 | AUC 0.8962、PR-AUC 0.3986、KS 0.6609、Recall@Top10 66.93%、ECE 0.0126（50 trials；30 trials 为 PR-AUC 0.4268） |
 | 2024 锁箱 | 待 2026 官方 ST 标签，不报告指标 |
 
-> 训练**现在就可以跑**（`python -m models.train --trials 30`，约 5 分钟）；上述测试指标来自 `run_id=20261114-211237-da08d92c`，与 `run_manifest.json` 的数据 SHA256 绑定。
+> 训练**现在就可以跑**（`python -m models.train --trials 30`，约 5 分钟）；上述测试指标来自当前产物 `run_id=20261114-213525-da08d92c`（50 trials），与 `run_manifest.json` 的数据 SHA256 绑定。
 >
 > 落地区（`DATA_RAW_Download/`）还有 3 张已核对、尚未入库的官方表：`FI_T1` 偿债能力（586,759 行，`F011501A` 带息债务比覆盖 100%）、`FS_Comscfi` 间接法（327,535 行，折旧 `D000103000` 覆盖 99.84%）、`TRD_Year` 年个股回报率（60,366 行）；它们可直接关闭"折旧/长期负债"两项口径缺口，命令 `python -m scripts.sync_raw_download --only FI_T1,FS_Comscfi,TRD_Year --write`。
 >
@@ -159,6 +161,26 @@ curl -X POST http://localhost:8000/predict/codes -H "Content-Type: application/j
 - 契约：`docs/FastAPI服务层设计.md`；三层架构与图表方案：`docs/前端架构与图表方案.md`；功能/预测/UI 设计：`docs/平台功能与预测设计.md`。
 - 前端切远程：设置 `RISK_API_URL=http://localhost:8000`（`utils/backend.py` 自动 API 优先、失败回退本地）。
 - 图表：默认 Plotly；把 `echarts.min.js` 放入 `streamlit_app/components/echarts_local/` 后，数据看板可切换 ECharts（离线本地渲染，不依赖 CDN）。
+- 服务层除核心接口外，还含 `/finance/*`（财务分析）、`/risk/rules/*`（规则六维评分）、`/alerts*`（预警闭环）等阶段 1 移植接口，实现在 `api/services/`（`finance.py` / `rules.py` / `alerts.py`）。
+
+### 方式五：Vue 3 前端（现代化 SPA，需 Node）
+
+项目内置一个 Vue 3 单页应用（`web/`），开发期由 Vite 按前缀代理到 FastAPI：
+
+```bash
+# 1) 启动后端
+uvicorn api.main:app --port 8000
+
+# 2) 安装依赖并启动前端（开发模式 → http://localhost:5173）
+cd web && npm install && npm run dev
+
+# 3) 构建产物（web/dist/，可交给任意静态服务器托管）
+npm run build
+```
+
+- 七个视图：数据看板 / 企业列表 / 企业诊断 / 预警中心 / 模型解释 / 财务分析 / 报告导出（路由见 `web/src/router.ts`）。
+- 财务分析含杜邦分析、Altman Z/Z2、Piotroski、Beneish 与同业对标（对应 `api/services/finance.py`）。
+- 根目录 `index.html` 为项目落地页（导航入口），"进入平台"指向 `web/dist/index.html`。
 
 ---
 
@@ -212,6 +234,8 @@ graph TB
     style L5 fill:#f3e5f5,stroke:#6a1b9a
 ```
 
+> 应用层现为双前端：**Streamlit**（`streamlit_app/`，本地直连、离线可用）与 **Vue 3 SPA**（`web/`，经 **FastAPI**（`api/`）取数）。两者共用同一领域层 `models/`，服务层接口见 `api/main.py`。
+
 ### 数据流水线（命令级）
 
 ```mermaid
@@ -243,8 +267,10 @@ flowchart LR
 | 机器学习 | XGBoost、LightGBM、CatBoost | 五模型对比，XGBoost 为主模型 |
 | 超参优化 | Optuna（TPE + MedianPruner） | 贝叶斯搜索，替代网格/随机搜索 |
 | 可解释性 | SHAP（TreeExplainer） | 四维度归因分析 |
-| 前端 | Streamlit + Plotly | 五大模块交互式平台，全中文图表 |
-| 报告 | ReportLab（内置 CID 中文字体）、openpyxl | PDF/Excel 导出，零外挂字体 |
+| 前端（Streamlit） | Streamlit + Plotly（+ ECharts 本地化选配） | 五大模块快速原型，全中文图表、离线可用 |
+| 前端（Vue SPA） | Vue 3 + Vite + TypeScript + vue-router + ECharts | 七视图生产化前端（`web/`） |
+| 服务层 | FastAPI + Pydantic + httpx | 评分/解释/监控 + 财务/规则/预警闭环 HTTP 接口 |
+| 报告 | ReportLab（内置 CID 中文字体）、openpyxl、pandoc + python-docx | PDF/Excel 导出 + 论文 Word 生成 |
 | 工程 | pytest、ruff、Docker Compose、Makefile | 测试、规范、部署、一键复现 |
 
 ---
@@ -254,10 +280,14 @@ flowchart LR
 ```
 financial-risk-warning-platform/
 ├── DATA_RAW_Download/            # 📦 下载落地区（只读、不入库）：CSMAR 原始包原样存放
-├── api/                          # 🔌 FastAPI 服务层：评分/解释/监控 HTTP 接口
+├── api/                          # 🔌 FastAPI 服务层：评分/解释/监控 + 财务/规则/预警接口
 │   ├── main.py                   #   FastAPI 入口 + 路由
 │   ├── schemas.py                #   Pydantic 请求模型
-│   └── services.py               #   领域层薄封装（models/* → JSON）
+│   └── services/                 #   领域层薄封装
+│       ├── __init__.py           #   核心评分/解释/监控（models/* → JSON）
+│       ├── finance.py            #   财务分析（阶段 1 移植）
+│       ├── rules.py              #   规则六维评分（阶段 1 移植）
+│       └── alerts.py             #   预警闭环（SQLite 持久化）
 ├── config/                       # ⚙️ 全局配置（唯一事实来源）
 │   ├── settings.py               #   路径（含落地区/暂存区）、样本窗口、阈值、随机种子
 │   └── feature_registry.py       #   80 维特征元数据（中英文名/维度/方向/口径）
@@ -287,10 +317,21 @@ financial-risk-warning-platform/
 │   ├── monitor.py                #   PSI 漂移 + 性能衰减 + 处置建议
 │   └── artifacts/                #   模型权重、指标、对比表、runs/<run_id>/ 快照
 ├── streamlit_app/                # 🖥️ 前端
-│   ├── app.py                    #   首页（状态自检 + 模块导航）
+│   ├── streamlit_app.py          #   首页（状态自检 + 模块导航）
 │   ├── pages/                    #   1_数据看板 / 2_企业诊断 / 3_批量预警 / 4_模型解释 / 5_报告导出
 │   ├── components/layout.py      #   KPI 行、页头、下载按钮
-│   └── utils/                    #   data（缓存取数）/ charts（Plotly）/ report（PDF·Excel）/ styles
+│   ├── components/echarts_local/ #   ECharts 本地组件（离线渲染，无 CDN）
+│   └── utils/                    #   data（缓存取数）/ charts（Plotly）/ backend（API·本地回退）
+│                                 #   api_client / echarts_options / report（PDF·Excel）/ styles
+├── web/                          # 🖥️ Vue 3 SPA 前端（Vite + TypeScript + ECharts）
+│   ├── index.html                #   SPA 入口
+│   ├── package.json              #   vue / vue-router / echarts + vite 工具链
+│   ├── vite.config.ts            #   开发代理（/health /predict /finance /alerts ... → :8000）
+│   ├── src/api.ts                #   API 客户端 + TypeScript 类型契约
+│   ├── src/router.ts             #   七视图路由
+│   ├── src/views/                #   Dashboard / Enterprises / Enterprise / Alerts / Explain / Finance / Report
+│   └── dist/                     #   构建产物（可直接静态托管）
+├── index.html                    # 🌐 项目落地页（导航到 web/dist 与文档）
 ├── data/                         # 🗄️ 数据（详见 data/README.md）
 │   ├── gen_demo_data.py          #   演示数据生成器（潜在风险因子驱动）
 │   ├── mapping/csmar.yaml        #   CSMAR 字段映射（别名/单位/编码）
@@ -304,6 +345,8 @@ financial-risk-warning-platform/
 │   ├── 数据缺口与补齐清单_20261114.md  # 当前缺口、补齐动作、验收（最新口径）
 │   ├── 数据治理与目录规范.md      #   分层目录、命名、清洗规则、质量门、激活流程
 │   ├── 数据字典与特征口径.md      #   由注册表自动生成
+│   ├── 论文_第1-4章.md / 论文_系统设计与实现.md / 论文_参考文献.md  # 论文正文稿
+│   ├── 论文_全文.docx             #   论文 Word 版（封面/声明/摘要/目录/正文/参考文献）
 │   ├── 文献与资料调研清单.md      #   49 项资源清单与获取状态
 │   ├── resources_catalog.csv     #   资源清单（机器可读）
 │   ├── batch_download_resources.py
@@ -317,14 +360,19 @@ financial-risk-warning-platform/
 ├── scripts/gen_data_dictionary.py # 🔁 文档自动生成
 ├── scripts/convert_csmar_xlsx.py  # 🔁 现金流量表 XLSX 流式转 CSV
 ├── scripts/validate_raw_data.py   # ✅ 原始数据质量校验（结构/主键/标签/覆盖）
-├── tests/                        # ✅ 67 项单元测试
+├── scripts/thesis_md2docx.lua     # 📄 pandoc 过滤器：mermaid→占位、去排版说明
+├── scripts/postprocess_docx.py    # 📄 论文 Word 后处理：A4/宋体黑体/三线表/目录标题
+├── scripts/add_front_matter.py    # 📄 封面 + 原创性声明 + 中英文摘要
+├── tests/                        # ✅ 76 项测试（含 API/前端）
 │   ├── conftest.py               #   内存面板夹具（不写盘、不依赖模型）
 │   ├── test_feature_registry.py  #   特征口径一致性
 │   ├── test_feature_engineering.py
 │   ├── test_stats_utils.py       #   IV/PSI/VIF/KS 数学正确性
 │   ├── test_metrics.py
 │   ├── test_calibration.py       #   等渗/Platt 回退/交叉拟合
-│   └── test_io_and_pipeline.py
+│   ├── test_io_and_pipeline.py
+│   ├── test_api.py               #   FastAPI 接口冒烟（无模型自动跳过）
+│   └── test_frontend_hybrid.py   #   backend 抽象 + ECharts option 工厂
 ├── docker/entrypoint.sh          # 容器启动自检（缺数据/模型自动补齐）
 ├── Dockerfile  docker-compose.yml
 ├── Makefile  pyproject.toml  requirements.txt  .env.example  LICENSE
@@ -457,8 +505,9 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | 5. 评估 | `python -m models.evaluate` | `evaluation_report.md`、校准/分群 CSV |
 | 6. 解释 | `python -m models.shap_analysis`（`--check` 校验缓存版本） | `shap_values.pkl`、`cache/shap_meta.json` |
 | 7. 监控 | `python -m models.monitor` | `monitor_report.json`、`psi_detail.csv` |
-| 8. 平台 | `streamlit run streamlit_app/app.py` | 五大模块可交互 |
-| 9. 测试 | `python -m pytest -q` | 67 passed |
+| 8. 平台 | `streamlit run streamlit_app/streamlit_app.py` | 五大模块可交互 |
+| 9. 测试 | `python -m pytest -q` | 76 passed |
+| 10. 论文 | `pandoc docs/论文_第1-4章.md docs/论文_系统设计与实现.md docs/论文_参考文献.md --lua-filter scripts/thesis_md2docx.lua --toc --standalone -o docs/论文_全文.docx` → `python scripts/postprocess_docx.py docs/论文_全文.docx` → `python scripts/add_front_matter.py docs/论文_全文.docx` | `论文_全文.docx`（封面/声明/摘要/目录/正文/参考文献） |
 
 ---
 
@@ -508,7 +557,7 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 `DATA_RAW_Download/` 是下载落地区，保留 CSMAR 原始目录名与分片，**只读、不入库**；`data/incoming/csmar/raw/` 是暂存区，由 `scripts.sync_raw_download.py` 规范命名并写入 manifest；`data/raw/` 是契约层，列名 snake_case、主键 `stock_code + year`，是 ETL 唯一读取入口。这样换一次导出只影响暂存区，不会把下载批次写死进代码。
 
 **Q：现在能不能直接训练？**
-能。`python -m models.train --trials 30` 约 5 分钟；前置条件只有 4 个：面板 2015–2023 非空、标签 T+2 可对齐、特征与注册表同源、模型输入列齐全。`python -m scripts.check_data_readiness` 会逐项检查并在 BLOCK 时返回非零退出码（当前 PASS 26 / WARN 2 / BLOCK 0）。唯一未完成的是 2024 锁箱，需要 2026 年官方 ST 标签。
+能。`python -m models.train --trials 30` 约 5 分钟；前置条件只有 4 个：面板 2015–2023 非空、标签 T+2 可对齐、特征与注册表同源、模型输入列齐全。`python -m scripts.check_data_readiness` 会逐项检查并在 BLOCK 时返回非零退出码（当前 PASS 26 / WARN 1 / BLOCK 0）。唯一未完成的是 2024 锁箱，需要 2026 年官方 ST 标签。
 
 **Q：SHAP 图里中文是方块？**
 本项目用 Plotly 重绘 SHAP 图，不依赖 matplotlib 字体配置；只有 `notebooks/` 中使用 matplotlib 时才需要设置 `font.sans-serif`。
@@ -531,8 +580,10 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | 模型训练与评估 | ✅ | 五模型对比、Optuna、OOT 评估、分群一致性 |
 | SHAP 可解释性 | ✅ | 四维度分析 + 缓存 + Plotly 可视化 |
 | Streamlit 平台 | ✅ | 五大模块 + 报告导出 |
-| 工程化 | ✅ | 67 项测试、Docker、Makefile、文档自动生成 |
-| 待办 | ⬜ | 2024 锁箱（等 2026 官方标签）、扣非/折旧/长期负债官方口径核验、2025 MD&A 文本、在线增量更新、模型注册表（MLflow） |
+| FastAPI 服务层 | ✅ | 评分/解释/监控 + 财务/规则/预警闭环接口 |
+| 论文文档 | ✅ | 第 1–5 章正文稿 + 参考文献 + Word 版（`docs/论文_全文.docx`） |
+| 工程化 | ✅ | 76 项测试、Docker、Makefile、文档自动生成 |
+| 待办 | ⬜ | 2024 锁箱（等 2026 官方标签）、扣非净利润官方口径核验（FI_Indicators）、2025 MD&A 文本、在线增量更新、模型注册表（MLflow） |
 
 ---
 
