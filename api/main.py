@@ -17,6 +17,8 @@ from fastapi.responses import JSONResponse, Response
 from api import services
 from api.schemas import CodesRequest, FrameRequest
 from api.services import alerts as alerts_service
+from api.services import analyze as analyze_service
+from api.services import datasources as datasources_service
 from api.services import finance as finance_service
 from api.services import rules as rules_service
 
@@ -182,3 +184,26 @@ def alerts_handle(alert_id: int, payload: dict) -> dict:
 def alerts_report(alert_id: int) -> Response:
     return Response(content=alerts_service.report_markdown(alert_id),
                     media_type="text/markdown; charset=utf-8")
+
+
+# ---------------------------------------------------------------------------
+# 数据源接入（阶段 4 移植）
+# ---------------------------------------------------------------------------
+
+@app.get("/datasources")
+def datasources() -> dict:
+    return datasources_service.source_status()
+
+
+@app.post("/enterprise/{code}/refresh")
+def enterprise_refresh(code: str) -> dict:
+    return datasources_service.refresh_enterprise(code)
+
+
+# ---------------------------------------------------------------------------
+# LLM 智能研判（阶段 4 移植）
+# ---------------------------------------------------------------------------
+
+@app.post("/analyze/{code}")
+def analyze(code: str) -> dict:
+    return _or_404(analyze_service.analyze_by_code(code))

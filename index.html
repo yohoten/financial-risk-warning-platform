@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>财务风险智能预警平台 · 项目主页</title>
+  <meta name="description" content="基于 XGBoost + SHAP + LLM 智能研判的上市公司财务风险预警平台：36 维特征、双前端（Streamlit / Vue 3 + FastAPI）、规则六维评分与预警闭环，一站式数据采集到报告导出。" />
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232563eb'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='44' font-size='34' font-weight='700' fill='%23fff' text-anchor='middle' font-family='Microsoft YaHei,sans-serif'%3E风%3C/text%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #0b1220;
+      --bg-elev: #111a2e;
+      --card: #131d33;
+      --border: #24314f;
+      --text: #e2e8f0;
+      --text-sub: #94a3b8;
+      --primary: #2563eb;
+      --primary-deep: #1e40af;
+      --accent: #06b6d4;
+      --ok: #16a34a;
+      --warn: #d97706;
+      --danger: #dc2626;
+      --grad: linear-gradient(135deg, #2563eb, #06b6d4);
+      --sans: 'Microsoft YaHei', 'PingFang SC', system-ui, 'Segoe UI', sans-serif;
+      --mono: 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+    section { padding: 72px 0; }
+    h2.sec-title { font-size: 26px; text-align: center; margin-bottom: 8px; }
+    .sec-sub { text-align: center; color: var(--text-sub); font-size: 14px; margin-bottom: 40px; }
+    .grad-text {
+      background: var(--grad);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    code {
+      font-family: var(--mono);
+      font-size: 0.92em;
+      color: var(--accent);
+      background: rgba(6, 182, 212, 0.08);
+      border-radius: 4px;
+      padding: 1px 6px;
+    }
+
+    /* ---------- Hero ---------- */
+    .hero { position: relative; padding: 88px 0 96px; overflow: hidden; }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(600px 300px at 15% 10%, rgba(37, 99, 235, 0.18), transparent 70%),
+        radial-gradient(500px 280px at 85% 20%, rgba(6, 182, 212, 0.12), transparent 70%);
+      pointer-events: none;
+    }
+    .hero-inner { position: relative; text-align: center; }
+    .hero-mark {
+      width: 72px; height: 72px; margin: 0 auto 20px;
+      border-radius: 18px; background: var(--grad);
+      color: #fff; font-size: 34px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 32px rgba(37, 99, 235, 0.4);
+    }
+    .hero-tag {
+      display: inline-block; font-size: 12.5px; letter-spacing: 1px;
+      color: var(--accent); border: 1px solid rgba(6, 182, 212, 0.35);
+      background: rgba(6, 182, 212, 0.08); border-radius: 999px;
+      padding: 4px 14px; margin-bottom: 18px;
+    }
+    .hero h1 { font-size: 40px; line-height: 1.25; letter-spacing: 1px; }
+    .hero h1 .sub {
+      display: block; font-size: 22px; font-weight: 500;
+      color: var(--text-sub); margin-top: 8px; letter-spacing: 0;
+    }
+    .hero-desc { max-width: 760px; margin: 22px auto 0; color: var(--text-sub); font-size: 15px; }
+    .hero-desc strong { color: var(--text); }
+    .badges { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
+    .badge {
+      font-family: var(--mono); font-size: 12px; color: var(--text-sub);
+      border: 1px solid var(--border); background: var(--bg-elev);
+      border-radius: 6px; padding: 3px 10px;
+    }
+    .badge b { color: var(--text); font-weight: 600; }
+    .cta-row { display: flex; justify-content: center; gap: 14px; margin-top: 34px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      border-radius: 10px; padding: 11px 26px; font-size: 14.5px;
+      font-family: inherit; cursor: pointer; transition: all 0.15s;
+      border: 1px solid var(--border); background: var(--bg-elev); color: var(--text);
+    }
+    .btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .btn.primary {
+      background: var(--grad); border-color: transparent; color: #fff; font-weight: 600;
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
+    }
+    .btn.primary:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 12px 28px rgba(37, 99, 235, 0.45); }
+
+    /* ---------- 指标带 ---------- */
+    .stats {
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      background: var(--bg-elev); padding: 40px 0;
+    }
+    .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; text-align: center; }
+    .stat-val {
+      font-size: 26px; font-weight: 700; font-family: var(--mono);
+      background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .stat-label { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
+    .stats-note { text-align: center; font-size: 12px; color: var(--text-sub); margin-top: 18px; }
+
+    /* ---------- 决策卡 ---------- */
+    .decisions-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .decision-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px; transition: all 0.2s;
+    }
+    .decision-card:hover { border-color: var(--primary); transform: translateY(-3px); }
+    .decision-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px; font-size: 19px;
+    }
+    .decision-card:nth-child(1) .decision-icon { background: rgba(220, 38, 38, 0.12); }
+    .decision-card:nth-child(2) .decision-icon { background: rgba(217, 119, 6, 0.12); }
+    .decision-card:nth-child(3) .decision-icon { background: rgba(37, 99, 235, 0.12); }
+    .decision-card h3 { font-size: 16px; margin-bottom: 10px; }
+    .decision-card p { font-size: 13.5px; color: var(--text-sub); }
+    .decision-card .why {
+      margin-top: 12px; font-size: 12.5px; color: var(--accent);
+      border-left: 2px solid var(--accent); padding-left: 10px;
+    }
+
+    /* ---------- 双引擎研判 ---------- */
+    .analyze-flow {
+      display: flex; align-items: stretch; justify-content: center;
+      gap: 0; flex-wrap: wrap; margin-bottom: 22px;
+    }
+    .af-node {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px 20px; text-align: center; margin: 0 10px 10px 0; min-width: 170px;
+    }
+    .af-node h4 { font-size: 14px; margin-bottom: 4px; }
+    .af-node p { font-size: 12px; color: var(--text-sub); }
+    .af-node.engine { border-color: rgba(37, 99, 235, 0.5); }
+    .af-node.check { border-color: rgba(6, 182, 212, 0.5); }
+    .af-arrow { align-self: center; color: var(--text-sub); font-size: 18px; margin: 0 10px 10px 0; }
+    .dims { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .dim-chip {
+      border: 1px solid var(--border); background: var(--bg-elev); border-radius: 999px;
+      padding: 7px 18px; font-size: 13.5px; color: var(--text);
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .dim-chip .num { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+    .analyze-note {
+      max-width: 760px; margin: 22px auto 0; text-align: center;
+      color: var(--text-sub); font-size: 13px;
+    }
+
+    /* ---------- 双前端 ---------- */
+    .frontends { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .fe-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 26px; transition: all 0.2s;
+    }
+    .fe-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+    .fe-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .fe-icon {
+      width: 42px; height: 42px; border-radius: 10px; font-size: 20px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .fe-card.st .fe-icon { background: rgba(255, 75, 75, 0.12); }
+    .fe-card.vue .fe-icon { background: rgba(37, 99, 235, 0.12); }
+    .fe-card h3 { font-size: 16px; }
+    .fe-card .fe-role { font-size: 12px; color: var(--text-sub); }
+    .fe-card ul { list-style: none; margin-top: 6px; }
+    .fe-card li { font-size: 13px; color: var(--text-sub); padding: 3px 0; }
+    .fe-card li::before { content: '✓ '; color: var(--ok); font-weight: 700; }
+    .fe-card .fe-port {
+      margin-top: 12px; font-family: var(--mono); font-size: 12px;
+      color: var(--accent);
+    }
+
+    /* ---------- 功能模块 ---------- */
+    .modules-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .module-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 20px; transition: all 0.2s;
+    }
+    .module-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+    .module-icon { font-size: 24px; margin-bottom: 8px; }
+    .module-card h3 { font-size: 14.5px; margin-bottom: 6px; }
+    .module-card p { font-size: 12.5px; color: var(--text-sub); }
+
+    /* ---------- 流水线 ---------- */
+    .pipeline { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; justify-content: center; }
+    .pipe-node {
+      flex: 1; min-width: 150px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 18px 16px; text-align: center;
+      margin: 0 12px 12px 0;
+    }
+    .pipe-step { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: 1px; }
+    .pipe-node h4 { font-size: 14.5px; margin: 6px 0 4px; }
+    .pipe-node p { font-size: 12px; color: var(--text-sub); }
+    .pipe-arrow { align-self: center; color: var(--text-sub); font-size: 18px; margin: 0 12px 12px 0; }
+
+    /* ---------- 快速开始 ---------- */
+    .quickstart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .quickstart {
+      background: var(--bg-elev); border: 1px solid var(--border); border-radius: 14px;
+      overflow: hidden;
+    }
+    .qs-head {
+      display: flex; align-items: center; gap: 8px; padding: 12px 18px;
+      border-bottom: 1px solid var(--border); background: rgba(37, 99, 235, 0.06);
+    }
+    .qs-head .dots { display: flex; gap: 6px; }
+    .qs-head .dots i { width: 11px; height: 11px; border-radius: 50%; background: var(--border); }
+    .qs-title { font-size: 12.5px; color: var(--text-sub); margin-left: 8px; }
+    .quickstart pre {
+      padding: 16px 18px; overflow-x: auto; font-family: var(--mono);
+      font-size: 12.5px; line-height: 1.9; color: #cbd5e1;
+    }
+    .quickstart .cm { color: #64748b; }
+    .quickstart .cmd { color: #67e8f9; }
+    .qs-foot {
+      padding: 10px 16px; border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--text-sub);
+    }
+
+    /* ---------- 页脚 ---------- */
+    footer { border-top: 1px solid var(--border); padding: 36px 0; text-align: center; color: var(--text-sub); font-size: 13px; }
+    footer .links { margin-bottom: 10px; }
+    footer .links a { margin: 0 12px; }
+
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: repeat(3, 1fr); }
+      .decisions-grid { grid-template-columns: 1fr 1fr; }
+      .frontends, .quickstart-grid { grid-template-columns: 1fr; }
+      .modules-grid { grid-template-columns: repeat(2, 1fr); }
+      .hero h1 { font-size: 30px; }
+      .hero h1 .sub { font-size: 18px; }
+    }
+    @media (max-width: 600px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .decisions-grid { grid-template-columns: 1fr; }
+      .modules-grid { grid-template-columns: 1fr; }
+      section { padding: 52px 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= Hero ================= -->
+  <header class="hero">
+    <div class="wrap hero-inner">
+      <div class="hero-mark">风</div>
+      <div class="hero-tag">XGBoost × TreeSHAP × LLM 智能研判</div>
+      <h1>
+        上市公司财务风险智能预警平台
+        <span class="sub">让每一个风险评分都可被拆解、审计与追溯</span>
+      </h1>
+      <p class="hero-desc">
+        融合 <strong>80 维候选 / 36 维入选</strong>的多源异构特征体系，以 <strong>XGBoost</strong> 为主模型、
+        <strong>TreeSHAP</strong> 实现四维可解释分析；<strong>规则六维评分 + LLM 智能研判</strong>双引擎交叉校验，
+        覆盖数据采集、特征工程、模型训练、预警闭环到报告导出的完整链路。
+      </p>
+      <div class="badges">
+        <span class="badge"><b>Python</b> 3.10+</span>
+        <span class="badge"><b>XGBoost</b> 2.0</span>
+        <span class="badge"><b>SHAP</b> 0.45</span>
+        <span class="badge"><b>FastAPI</b> 0.115</span>
+        <span class="badge"><b>Vue 3</b> + ECharts</span>
+        <span class="badge"><b>Tests</b> 76 passed</span>
+        <span class="badge"><b>License</b> MIT</span>
+      </div>
+      <div class="cta-row">
+        <a class="btn primary" href="web/dist/index.html">🖥️ 进入平台</a>
+        <a class="btn" href="#analyze">🤖 智能研判</a>
+        <a class="btn" href="README.md">📖 项目文档</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= 核心指标 ================= -->
+  <div class="stats">
+    <div class="wrap">
+      <div class="stats-grid">
+        <div>
+          <div class="stat-val">0.8962</div>
+          <div class="stat-label">AUC · 2023 留出测试</div>
+        </div>
+        <div>
+          <div class="stat-val">0.6609</div>
+          <div class="stat-label">KS · 2023 留出测试</div>
+        </div>
+        <div>
+          <div class="stat-val">66.93%</div>
+          <div class="stat-label">Recall@Top10%</div>
+        </div>
+        <div>
+          <div class="stat-val">22,814</div>
+          <div class="stat-label">建模面板 · 公司-年</div>
+        </div>
+        <div>
+          <div class="stat-val">3,629</div>
+          <div class="stat-label">制造业上市公司</div>
+        </div>
+        <div>
+          <div class="stat-val">36/80</div>
+          <div class="stat-label">入选 / 候选特征</div>
+        </div>
+      </div>
+      <p class="stats-note">
+        指标来自留出测试产物（run_id=20261114-213525-da08d92c，50 trials），与 run_manifest.json 的数据 SHA256 绑定；2024 锁箱待官方 ST 标签，不报告指标。
+      </p>
+    </div>
+  </div>
+
+  <!-- ================= 双引擎智能研判 ================= -->
+  <section id="analyze">
+    <div class="wrap">
+      <h2 class="sec-title">双引擎<span class="grad-text">智能研判</span></h2>
+      <p class="sec-sub">规则引擎保证下限，LLM 提升洞察上限，交叉校验确保结论可审计</p>
+      <div class="analyze-flow">
+        <div class="af-node engine">
+          <h4>📊 规则六维评分</h4>
+          <p>财务 / 法律 / 舆情 / 经营<br />信用 / 供应链 量化打分</p>
+        </div>
+        <div class="af-arrow">＋</div>
+        <div class="af-node engine">
+          <h4>🤖 LLM 研判</h4>
+          <p>OpenAI 兼容网关<br />DeepSeek / vLLM 可切换</p>
+        </div>
+        <div class="af-arrow">→</div>
+        <div class="af-node check">
+          <h4>⚖️ 交叉校验</h4>
+          <p>一致 → 采信 LLM<br />不一致 → 以规则为准</p>
+        </div>
+        <div class="af-arrow">→</div>
+        <div class="af-node check">
+          <h4>🧾 证据链输出</h4>
+          <p>评级 + 一句话结论<br />+ 逐条证据（≤5 条）</p>
+        </div>
+      </div>
+      <div class="dims">
+        <span class="dim-chip"><span class="num">D1</span>财务健康</span>
+        <span class="dim-chip"><span class="num">D2</span>法律合规</span>
+        <span class="dim-chip"><span class="num">D3</span>舆情声誉</span>
+        <span class="dim-chip"><span class="num">D4</span>经营能力</span>
+        <span class="dim-chip"><span class="num">D5</span>信用状况</span>
+        <span class="dim-chip"><span class="num">D6</span>供应链稳定</span>
+      </div>
+      <p class="analyze-note">
+        LLM 输出强制 JSON 化（评级 / 结论 / 证据），证据必须逐条来自给定数据、不得编造；
+        LLM 未配置或调用失败时自动退化为纯规则结果，研判链路不中断。
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= 关键工程决策 ================= -->
+  <section id="decisions" style="background: var(--bg-elev); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+    <div class="wrap">
+      <h2 class="sec-title">三个<span class="grad-text">关键工程决策</span></h2>
+      <p class="sec-sub">金融风控场景下，严谨的方法论比模型精度本身更重要</p>
+      <div class="decisions-grid">
+        <div class="decision-card">
+          <div class="decision-icon">⏱️</div>
+          <h3>防前视偏差</h3>
+          <p>T 年 ST 标签 ↔ T-2 年特征对齐建模。</p>
+          <div class="why">ST 判定依据 T-1 年年报，而年报于 T 年 4 月才披露——用 T 年特征会泄露未来信息</div>
+        </div>
+        <div class="decision-card">
+          <div class="decision-icon">🛡️</div>
+          <h3>防过拟合</h3>
+          <p>按年分组扩展窗口 CV + 2022 OOT + 2023 留出测试，2024 锁箱不碰。</p>
+          <div class="why">财务数据强时序依赖，随机 K 折会让模型"看到未来"；2024 标签尚未披露，不伪报测试指标</div>
+        </div>
+        <div class="decision-card">
+          <div class="decision-icon">📐</div>
+          <h3>防口径漂移</h3>
+          <p>特征元数据集中于 <code>config/feature_registry.py</code> 单一事实源。</p>
+          <div class="why">ETL、模型、前端、文档同源，避免"代码一套、论文一套"</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 双前端 ================= -->
+  <section id="frontends">
+    <div class="wrap">
+      <h2 class="sec-title"><span class="grad-text">双前端</span>架构</h2>
+      <p class="sec-sub">共用同一领域层 models/ 与 FastAPI 服务层，一份口径、两种形态</p>
+      <div class="frontends">
+        <div class="fe-card st">
+          <div class="fe-head">
+            <div class="fe-icon">🔥</div>
+            <div>
+              <h3>Streamlit</h3>
+              <div class="fe-role">快速原型 · 离线可用</div>
+            </div>
+          </div>
+          <ul>
+            <li>五大模块：看板 / 诊断 / 批量预警 / 解释 / 报告</li>
+            <li>API 优先、失败自动回退本地缓存取数</li>
+            <li>Plotly 默认图表，ECharts 本地化选配（无 CDN）</li>
+            <li>零 Node 依赖，一条命令启动</li>
+          </ul>
+          <div class="fe-port">streamlit run streamlit_app/streamlit_app.py → :8501</div>
+        </div>
+        <div class="fe-card vue">
+          <div class="fe-head">
+            <div class="fe-icon">⚡</div>
+            <div>
+              <h3>Vue 3 SPA</h3>
+              <div class="fe-role">生产化前后端 · 专业大屏</div>
+            </div>
+          </div>
+          <ul>
+            <li>七视图：看板 / 企业列表 / 企业诊断 / 预警中心 / 解释 / 财务分析 / 报告</li>
+            <li>Vite + TypeScript + ECharts，深浅双主题</li>
+            <li>企业诊断内置「智能研判」按钮（LLM + 规则交叉校验）</li>
+            <li>开发期代理到 FastAPI，产物可托管任意静态服务器</li>
+          </ul>
+          <div class="fe-port">uvicorn api.main:app --port 8000 ＋ npm run dev → :5173</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 功能模块 ================= -->
+  <section id="modules" style="background: var(--bg-elev); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+    <div class="wrap">
+      <h2 class="sec-title">八大<span class="grad-text">功能模块</span></h2>
+      <p class="sec-sub">数据看板到报告导出，Vue 3 SPA 七视图 + 服务层全覆盖</p>
+      <div class="modules-grid">
+        <div class="module-card">
+          <div class="module-icon">📊</div>
+          <h3>数据看板</h3>
+          <p>行业风险分布、热力图、ST 趋势、TOP-N 高风险、数据质量监控</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon">🏢</div>
+          <h3>企业诊断</h3>
+          <p>风险评级、SHAP 归因瀑布、历史轨迹、一键 LLM 智能研判</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon">🚨</div>
+          <h3>预警中心</h3>
+          <p>预警生成 → 状态处置 → 处置报告，SQLite 持久化闭环管理</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon">🔍</div>
+          <h3>模型解释</h3>
+          <p>全局重要性、依赖效应、交互强度、五模型对比、PSI 漂移监控</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon">📈</div>
+          <h3>财务分析</h3>
+          <p>杜邦分解、Altman Z/Z2、Piotroski、Beneish 与同业对标</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon">⚖️</div>
+          <h3>规则六维评分</h3>
+          <p>财务 / 法律 / 舆情 / 经营 / 信用 / 供应链六维量化评级</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon">📄</div>
+          <h3>报告导出</h3>
+          <p>PDF 诊断报告（内置中文字体）、批量 Excel、评估报告、数据字典</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon">⚙️</div>
+          <h3>服务与工程</h3>
+          <p>FastAPI 全接口、Docker 一键部署、76 项测试、运行清单留痕</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 技术流水线 ================= -->
+  <section id="pipeline">
+    <div class="wrap">
+      <h2 class="sec-title">端到端<span class="grad-text">技术流水线</span></h2>
+      <p class="sec-sub">数据分三层落地：下载区只读、暂存区规范、契约区稳定</p>
+      <div class="pipeline">
+        <div class="pipe-node">
+          <div class="pipe-step">STEP 01</div>
+          <h4>数据采集</h4>
+          <p>CSMAR + 巨潮/东财<br />企查查爬虫</p>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">
+          <div class="pipe-step">STEP 02</div>
+          <h4>ETL 契约层</h4>
+          <p>质量校验 G0–G5<br />训练就绪体检</p>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">
+          <div class="pipe-step">STEP 03</div>
+          <h4>特征工程</h4>
+          <p>80 维候选构造<br />四步筛选 → 36 维</p>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">
+          <div class="pipe-step">STEP 04</div>
+          <h4>模型训练</h4>
+          <p>扩展窗口 CV<br />Optuna 五模型</p>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">
+          <div class="pipe-step">STEP 05</div>
+          <h4>SHAP 解释</h4>
+          <p>全局 / 局部 / 依赖<br />交互四维分析</p>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">
+          <div class="pipe-step">STEP 06</div>
+          <h4>服务与研判</h4>
+          <p>FastAPI + 双前端<br />规则 + LLM 研判闭环</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 快速开始 ================= -->
+  <section id="quickstart" style="background: var(--bg-elev); border-top: 1px solid var(--border);">
+    <div class="wrap">
+      <h2 class="sec-title">快速<span class="grad-text">开始</span></h2>
+      <p class="sec-sub">演示模式 3 分钟跑通全链路，无需任何数据权限</p>
+      <div class="quickstart-grid">
+        <div class="quickstart">
+          <div class="qs-head">
+            <div class="dots"><i></i><i></i><i></i></div>
+            <span class="qs-title">bash — Streamlit 快速原型</span>
+          </div>
+<pre><span class="cmd">python</span> -m venv .venv <span class="cm">&amp;&amp; source .venv/bin/activate</span>
+<span class="cmd">pip</span> install -r requirements.txt
+
+<span class="cm"># 数据 + 特征（演示数据：240 家公司 × 10 年）</span>
+<span class="cmd">python</span> -m etl.run_pipeline
+
+<span class="cm"># 训练 + 评估 + 解释</span>
+<span class="cmd">python</span> -m models.train --trials 30
+<span class="cmd">python</span> -m models.evaluate
+<span class="cmd">python</span> -m models.shap_analysis
+
+<span class="cm"># 启动 → http://localhost:8501</span>
+<span class="cmd">streamlit</span> run streamlit_app/streamlit_app.py</pre>
+          <div class="qs-foot">
+            ⚠️ 已有真实数据时勿跑 <code>make all</code>：演示数据生成器会拒绝覆盖 CSMAR 真实文件；真实链路从 <code>make pipeline</code> 起。
+          </div>
+        </div>
+        <div class="quickstart">
+          <div class="qs-head">
+            <div class="dots"><i></i><i></i><i></i></div>
+            <span class="qs-title">bash — Vue 3 SPA 生产化前端</span>
+          </div>
+<pre><span class="cm"># 1) 启动后端服务层</span>
+<span class="cmd">uvicorn</span> api.main:app --port 8000
+
+<span class="cm"># 2) 前端依赖 + 开发模式 → http://localhost:5173</span>
+<span class="cmd">cd</span> web <span class="cm">&amp;&amp; npm install &amp;&amp; npm run dev</span>
+
+<span class="cm"># 3) 生产构建（产物在 web/dist/）</span>
+<span class="cmd">npm</span> run build
+
+<span class="cm"># 可选：LLM 智能研判</span>
+<span class="cm"># .env 配置 LLM_BASE_URL / LLM_API_KEY / LLM_MODEL</span>
+<span class="cm"># （DeepSeek / OpenAI / vLLM 等 OpenAI 兼容端点）</span></pre>
+          <div class="qs-foot">
+            Vite 开发期自动代理 <code>/predict /explain /finance /alerts /analyze</code> 等前缀到 :8000，前后端零 CORS 配置。
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 页脚 ================= -->
+  <footer>
+    <div class="wrap">
+      <div class="links">
+        <a href="README.md">README</a>
+        <a href="docs/FastAPI服务层设计.md">服务层设计</a>
+        <a href="docs/大屏平台开发设计方案.md">大屏方案</a>
+        <a href="docs/数据字典与特征口径.md">数据字典</a>
+        <a href="LICENSE">MIT License</a>
+      </div>
+      <div>上市公司财务风险智能预警平台 · Financial Risk Warning Platform</div>
+    </div>
+  </footer>
+
+</body>
+</html>

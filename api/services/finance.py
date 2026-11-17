@@ -82,6 +82,17 @@ def _panel() -> pd.DataFrame:
         df["stock_code"] = df["stock_code"].astype(str).str.replace(r"\.0$", "", regex=True).str.zfill(6)
     if "year" in df.columns:
         df["year"] = df["year"].astype(int)
+    # 合并留存收益补充表（盈余公积 + 未分配利润），补齐 Altman X2（G-13）
+    ext_path = settings.RAW_DIR / "candidates" / "balance_sheet_ext.csv"
+    if ext_path.exists():
+        try:
+            ext = pd.read_csv(ext_path, dtype={"stock_code": str}, encoding="utf-8-sig")
+            ext["stock_code"] = ext["stock_code"].astype(str).str.zfill(6)
+            ext["year"] = ext["year"].astype(int)
+            cols = [c for c in ("surplus_reserve", "undistributed_profit") if c in ext.columns]
+            df = df.merge(ext[["stock_code", "year", *cols]], on=["stock_code", "year"], how="left")
+        except Exception:  # noqa: BLE001 —— 补充表异常不影响主分析
+            pass
     return df
 
 
@@ -133,8 +144,8 @@ def _period_from_row(m: pd.Series) -> dict:
         "accum_depreciation": None,       # 契约表未含累计折旧
         "depreciation": depreciation,     # 当期折旧
         "goodwill": None,                 # 契约表未含商誉
-        "surplus_reserve": None,          # 契约表未含盈余公积
-        "undistributed_profit": None,     # 契约表未含未分配利润
+        "surplus_reserve": _f(m.get("surplus_reserve")),          # 盈余公积（补充表）
+        "undistributed_profit": _f(m.get("undistributed_profit")),  # 未分配利润（补充表）
         "operating_profit": _r(ebit - finance_expense, 2) if ebit is not None and finance_expense is not None else None,
         "finance_expense": finance_expense,
         "selling_expense": selling_expense,

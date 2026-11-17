@@ -166,6 +166,15 @@ DEMO_MODE = os.getenv("DEMO_MODE", "1") == "1"
 RISK_API_URL = os.getenv("RISK_API_URL", "").rstrip("/")
 RISK_API_TIMEOUT = float(os.getenv("RISK_API_TIMEOUT", "10"))
 
+# ---------------------------------------------------------------------------
+# LLM 研判（OpenAI 兼容端点；base_url + model 未配置时研判退化为纯规则）
+# ---------------------------------------------------------------------------
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "").rstrip("/")
+LLM_API_KEY = os.getenv("LLM_API_KEY", "")
+LLM_MODEL = os.getenv("LLM_MODEL", "")
+LLM_ANALYSIS_MAX_TOKENS = int(os.getenv("LLM_ANALYSIS_MAX_TOKENS", "4096"))
+LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "60"))
+
 
 def ensure_dirs() -> None:
     """创建运行期必需目录（幂等）。"""
