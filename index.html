@@ -7,33 +7,56 @@
   <meta name="description" content="基于 XGBoost + SHAP + LLM 智能研判的上市公司财务风险预警平台：36 维特征、双前端（Streamlit / Vue 3 + FastAPI）、规则六维评分与预警闭环，一站式数据采集到报告导出。" />
   <meta name="theme-color" content="#0b1220" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232563eb'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='44' font-size='34' font-weight='700' fill='%23fff' text-anchor='middle' font-family='Microsoft YaHei,sans-serif'%3E风%3C/text%3E%3C/svg%3E" />
+  <script>
+    // 主题引导：先于渲染执行，与平台 SPA 共用 localStorage['frw-theme'] 协议
+    ;(function () {
+      var saved = null
+      try { saved = localStorage.getItem('frw-theme') } catch (e) {}
+      var theme = saved === 'light' || saved === 'dark'
+        ? saved
+        : (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      document.documentElement.dataset.theme = theme
+      document.documentElement.classList.add('js')
+    })()
+  </script>
   <style>
     :root {
       --bg: #0b1220;
       --bg-elev: #111a2e;
       --card: #131d33;
       --border: #24314f;
+      --border-soft: #1b2740;
       --text: #e2e8f0;
       --text-sub: #94a3b8;
       --primary: #2563eb;
-      --primary-deep: #1e40af;
       --accent: #06b6d4;
       --ok: #16a34a;
       --warn: #d97706;
       --danger: #dc2626;
       --grad: linear-gradient(135deg, #2563eb, #06b6d4);
+      --nav-bg: rgba(11, 18, 32, 0.82);
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
       --sans: 'Microsoft YaHei', 'PingFang SC', system-ui, 'Segoe UI', sans-serif;
       --mono: 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+    }
+    html[data-theme='light'] {
+      --bg: #f4f6fb;
+      --bg-elev: #ffffff;
+      --card: #ffffff;
+      --border: #e5e9f2;
+      --border-soft: #eef1f7;
+      --text: #1f2937;
+      --text-sub: #6b7280;
+      --nav-bg: rgba(244, 246, 251, 0.85);
+      --shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
     body {
-      font-family: var(--sans);
-      font-size: 15px;
-      line-height: 1.7;
-      color: var(--text);
-      background: var(--bg);
+      font-family: var(--sans); font-size: 15px; line-height: 1.7;
+      color: var(--text); background: var(--bg);
       -webkit-font-smoothing: antialiased;
+      transition: background 0.2s, color 0.2s;
     }
     a { color: var(--accent); text-decoration: none; }
     .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
@@ -41,26 +64,60 @@
     h2.sec-title { font-size: 26px; text-align: center; margin-bottom: 8px; }
     .sec-sub { text-align: center; color: var(--text-sub); font-size: 14px; margin-bottom: 40px; }
     .grad-text {
-      background: var(--grad);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
+      background: var(--grad); -webkit-background-clip: text;
+      background-clip: text; color: transparent;
     }
     code {
-      font-family: var(--mono);
-      font-size: 0.92em;
-      color: var(--accent);
-      background: rgba(6, 182, 212, 0.08);
-      border-radius: 4px;
-      padding: 1px 6px;
+      font-family: var(--mono); font-size: 0.92em; color: var(--accent);
+      background: rgba(6, 182, 212, 0.08); border-radius: 4px; padding: 1px 6px;
+    }
+    /* 滚动进入动画：仅 JS 可用时启用，无 JS 全额显示 */
+    html.js .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.5s ease, transform 0.5s ease; }
+    html.js .reveal.in { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) {
+      html.js .reveal { opacity: 1; transform: none; transition: none; }
+      html { scroll-behavior: auto; }
     }
 
+    /* ---------- 吸顶导航 ---------- */
+    .topnav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+      background: var(--nav-bg); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      transform: translateY(-100%); transition: transform 0.25s;
+    }
+    .topnav.show { transform: none; }
+    .topnav-inner {
+      max-width: 1120px; margin: 0 auto; padding: 0 24px;
+      height: 54px; display: flex; align-items: center; gap: 18px;
+    }
+    .topnav-brand {
+      display: flex; align-items: center; gap: 9px; font-weight: 700;
+      font-size: 14px; color: var(--text); white-space: nowrap;
+    }
+    .topnav-brand .mark {
+      width: 26px; height: 26px; border-radius: 7px; background: var(--grad);
+      color: #fff; font-size: 13px; display: flex; align-items: center; justify-content: center;
+    }
+    .topnav-links { display: flex; gap: 2px; flex: 1; overflow-x: auto; }
+    .topnav-links a {
+      color: var(--text-sub); font-size: 13px; padding: 5px 11px;
+      border-radius: 7px; white-space: nowrap; transition: all 0.15s;
+    }
+    .topnav-links a:hover { color: var(--text); background: var(--border-soft); }
+    .topnav-links a.active { color: var(--accent); background: rgba(6, 182, 212, 0.1); }
+    .theme-btn {
+      border: 1px solid var(--border); background: var(--bg-elev); color: var(--text);
+      border-radius: 8px; width: 34px; height: 30px; cursor: pointer; font-size: 14px;
+      flex: none;
+    }
+    .theme-btn:hover { border-color: var(--accent); }
+
     /* ---------- Hero ---------- */
-    .hero { position: relative; padding: 88px 0 96px; overflow: hidden; }
+    .hero { position: relative; padding: 96px 0 100px; overflow: hidden; }
+    #hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.55; }
     .hero::before {
-      content: '';
-      position: absolute;
-      inset: 0;
+      content: ''; position: absolute; inset: 0;
       background:
         radial-gradient(600px 300px at 15% 10%, rgba(37, 99, 235, 0.18), transparent 70%),
         radial-gradient(500px 280px at 85% 20%, rgba(6, 182, 212, 0.12), transparent 70%);
@@ -68,9 +125,8 @@
     }
     .hero-inner { position: relative; text-align: center; }
     .hero-mark {
-      width: 72px; height: 72px; margin: 0 auto 20px;
-      border-radius: 18px; background: var(--grad);
-      color: #fff; font-size: 34px; font-weight: 700;
+      width: 72px; height: 72px; margin: 0 auto 20px; border-radius: 18px;
+      background: var(--grad); color: #fff; font-size: 34px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 8px 32px rgba(37, 99, 235, 0.4);
     }
@@ -106,7 +162,8 @@
       background: var(--grad); border-color: transparent; color: #fff; font-weight: 600;
       box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
     }
-    .btn.primary:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 12px 28px rgba(37, 99, 235, 0.45); }
+    .btn.primary:hover { color: #fff; transform: translateY(-2px); }
+    .btn.small { padding: 5px 14px; font-size: 12.5px; }
 
     /* ---------- 指标带 ---------- */
     .stats {
@@ -120,6 +177,23 @@
     }
     .stat-label { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
     .stats-note { text-align: center; font-size: 12px; color: var(--text-sub); margin-top: 18px; }
+
+    /* ---------- 截图展示 ---------- */
+    .shots-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .shot-card {
+      border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+      background: var(--card); transition: all 0.2s; display: block;
+    }
+    .shot-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: var(--shadow); }
+    .shot-chrome {
+      display: flex; align-items: center; gap: 8px; padding: 9px 14px;
+      border-bottom: 1px solid var(--border); background: var(--bg-elev);
+    }
+    .shot-chrome .dots { display: flex; gap: 5px; }
+    .shot-chrome .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--border); }
+    .shot-chrome .t { font-size: 12px; color: var(--text-sub); margin-left: 6px; }
+    .shot-card img { display: block; width: 100%; height: auto; }
+    .shots-note { text-align: center; font-size: 12px; color: var(--text-sub); margin-top: 16px; }
 
     /* ---------- 决策卡 ---------- */
     .decisions-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -144,10 +218,7 @@
     }
 
     /* ---------- 双引擎研判 ---------- */
-    .analyze-flow {
-      display: flex; align-items: stretch; justify-content: center;
-      gap: 0; flex-wrap: wrap; margin-bottom: 22px;
-    }
+    .analyze-flow { display: flex; align-items: stretch; justify-content: center; flex-wrap: wrap; margin-bottom: 22px; }
     .af-node {
       background: var(--card); border: 1px solid var(--border); border-radius: 12px;
       padding: 16px 20px; text-align: center; margin: 0 10px 10px 0; min-width: 170px;
@@ -164,10 +235,7 @@
       display: inline-flex; align-items: center; gap: 8px;
     }
     .dim-chip .num { font-family: var(--mono); font-size: 11px; color: var(--accent); }
-    .analyze-note {
-      max-width: 760px; margin: 22px auto 0; text-align: center;
-      color: var(--text-sub); font-size: 13px;
-    }
+    .analyze-note { max-width: 760px; margin: 22px auto 0; text-align: center; color: var(--text-sub); font-size: 13px; }
 
     /* ---------- 双前端 ---------- */
     .frontends { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -188,10 +256,7 @@
     .fe-card ul { list-style: none; margin-top: 6px; }
     .fe-card li { font-size: 13px; color: var(--text-sub); padding: 3px 0; }
     .fe-card li::before { content: '✓ '; color: var(--ok); font-weight: 700; }
-    .fe-card .fe-port {
-      margin-top: 12px; font-family: var(--mono); font-size: 12px;
-      color: var(--accent);
-    }
+    .fe-card .fe-port { margin-top: 12px; font-family: var(--mono); font-size: 12px; color: var(--accent); }
 
     /* ---------- 功能模块 ---------- */
     .modules-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
@@ -203,25 +268,48 @@
     .module-icon { font-size: 24px; margin-bottom: 8px; }
     .module-card h3 { font-size: 14.5px; margin-bottom: 6px; }
     .module-card p { font-size: 12.5px; color: var(--text-sub); }
+    .importance-card {
+      margin-top: 18px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px;
+      display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: center;
+    }
+    .importance-card h3 { font-size: 15px; margin-bottom: 8px; }
+    .importance-card p { font-size: 13px; color: var(--text-sub); }
+    #importance-chart { width: 100%; height: auto; display: block; }
+    #importance-chart svg { width: 100%; height: auto; }
+    .importance-card .src { margin-top: 10px; font-size: 11.5px; color: var(--text-sub); font-family: var(--mono); }
 
     /* ---------- 流水线 ---------- */
-    .pipeline { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; justify-content: center; }
+    .pipeline { display: flex; align-items: stretch; flex-wrap: wrap; justify-content: center; }
     .pipe-node {
       flex: 1; min-width: 150px; background: var(--card); border: 1px solid var(--border);
-      border-radius: 12px; padding: 18px 16px; text-align: center;
-      margin: 0 12px 12px 0;
+      border-radius: 12px; padding: 18px 16px; text-align: center; margin: 0 12px 12px 0;
     }
     .pipe-step { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: 1px; }
     .pipe-node h4 { font-size: 14.5px; margin: 6px 0 4px; }
     .pipe-node p { font-size: 12px; color: var(--text-sub); }
     .pipe-arrow { align-self: center; color: var(--text-sub); font-size: 18px; margin: 0 12px 12px 0; }
 
+    /* ---------- 时间线 ---------- */
+    .timeline { position: relative; max-width: 760px; margin: 0 auto; padding-left: 28px; }
+    .timeline::before {
+      content: ''; position: absolute; left: 7px; top: 6px; bottom: 6px;
+      width: 2px; background: var(--border);
+    }
+    .tl-item { position: relative; padding: 0 0 26px 18px; }
+    .tl-item:last-child { padding-bottom: 0; }
+    .tl-item::before {
+      content: ''; position: absolute; left: -26px; top: 7px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--bg); border: 2px solid var(--accent);
+    }
+    .tl-date { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+    .tl-item h4 { font-size: 14.5px; margin: 2px 0; }
+    .tl-item p { font-size: 13px; color: var(--text-sub); }
+
     /* ---------- 快速开始 ---------- */
     .quickstart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .quickstart {
-      background: var(--bg-elev); border: 1px solid var(--border); border-radius: 14px;
-      overflow: hidden;
-    }
+    .quickstart { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
     .qs-head {
       display: flex; align-items: center; gap: 8px; padding: 12px 18px;
       border-bottom: 1px solid var(--border); background: rgba(37, 99, 235, 0.06);
@@ -233,38 +321,66 @@
       padding: 16px 18px; overflow-x: auto; font-family: var(--mono);
       font-size: 12.5px; line-height: 1.9; color: #cbd5e1;
     }
+    html[data-theme='light'] .quickstart pre { color: #334155; }
     .quickstart .cm { color: #64748b; }
-    .quickstart .cmd { color: #67e8f9; }
-    .qs-foot {
-      padding: 10px 16px; border-top: 1px solid var(--border);
-      font-size: 12px; color: var(--text-sub);
-    }
+    :root .quickstart .cmd { color: #67e8f9; }
+    html[data-theme='light'] .quickstart .cmd { color: #0891b2; }
+    .qs-foot { padding: 10px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-sub); }
 
-    /* ---------- 页脚 ---------- */
+    /* ---------- 页脚 / 回顶 ---------- */
     footer { border-top: 1px solid var(--border); padding: 36px 0; text-align: center; color: var(--text-sub); font-size: 13px; }
     footer .links { margin-bottom: 10px; }
     footer .links a { margin: 0 12px; }
+    .footer-meta { margin-top: 8px; font-size: 12px; font-family: var(--mono); }
+    #to-top {
+      position: fixed; right: 26px; bottom: 26px; z-index: 40;
+      width: 42px; height: 42px; border-radius: 50%;
+      border: 1px solid var(--border); background: var(--bg-elev); color: var(--text);
+      font-size: 17px; cursor: pointer; box-shadow: var(--shadow);
+      opacity: 0; pointer-events: none; transition: all 0.2s;
+    }
+    #to-top.show { opacity: 1; pointer-events: auto; }
+    #to-top:hover { border-color: var(--accent); transform: translateY(-2px); }
 
     @media (max-width: 900px) {
       .stats-grid { grid-template-columns: repeat(3, 1fr); }
       .decisions-grid { grid-template-columns: 1fr 1fr; }
       .frontends, .quickstart-grid { grid-template-columns: 1fr; }
       .modules-grid { grid-template-columns: repeat(2, 1fr); }
+      .importance-card { grid-template-columns: 1fr; }
       .hero h1 { font-size: 30px; }
       .hero h1 .sub { font-size: 18px; }
+      .topnav-brand span { display: none; }
     }
     @media (max-width: 600px) {
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      .decisions-grid { grid-template-columns: 1fr; }
-      .modules-grid { grid-template-columns: 1fr; }
+      .decisions-grid, .modules-grid, .shots-grid { grid-template-columns: 1fr; }
       section { padding: 52px 0; }
     }
   </style>
 </head>
 <body>
 
+  <!-- ================= 吸顶导航 ================= -->
+  <nav class="topnav" id="topnav" aria-label="页面导航">
+    <div class="topnav-inner">
+      <a class="topnav-brand" href="#top"><span class="mark">风</span><span>财务风险智能预警平台</span></a>
+      <div class="topnav-links">
+        <a href="#shots" data-nav="shots">平台一览</a>
+        <a href="#analyze" data-nav="analyze">智能研判</a>
+        <a href="#frontends" data-nav="frontends">双前端</a>
+        <a href="#modules" data-nav="modules">功能模块</a>
+        <a href="#timeline" data-nav="timeline">演进历程</a>
+        <a href="#quickstart" data-nav="quickstart">快速开始</a>
+      </div>
+      <button class="theme-btn" id="theme-btn" title="切换深浅主题">🌙</button>
+      <a class="btn primary small" href="web/dist/index.html">进入平台</a>
+    </div>
+  </nav>
+
   <!-- ================= Hero ================= -->
-  <header class="hero">
+  <header class="hero" id="top">
+    <canvas id="hero-canvas" aria-hidden="true"></canvas>
     <div class="wrap hero-inner">
       <div class="hero-mark">风</div>
       <div class="hero-tag">XGBoost × TreeSHAP × LLM 智能研判</div>
@@ -283,12 +399,12 @@
         <span class="badge"><b>SHAP</b> 0.45</span>
         <span class="badge"><b>FastAPI</b> 0.115</span>
         <span class="badge"><b>Vue 3</b> + ECharts</span>
-        <span class="badge"><b>Tests</b> 76 passed</span>
+        <span class="badge"><b>Tests</b> <span data-stat="tests">76</span> passed</span>
         <span class="badge"><b>License</b> MIT</span>
       </div>
       <div class="cta-row">
         <a class="btn primary" href="web/dist/index.html">🖥️ 进入平台</a>
-        <a class="btn" href="#analyze">🤖 智能研判</a>
+        <a class="btn" href="#shots">🖼️ 平台一览</a>
         <a class="btn" href="README.md">📖 项目文档</a>
       </div>
     </div>
@@ -298,62 +414,71 @@
   <div class="stats">
     <div class="wrap">
       <div class="stats-grid">
-        <div>
-          <div class="stat-val">0.8962</div>
-          <div class="stat-label">AUC · 2023 留出测试</div>
-        </div>
-        <div>
-          <div class="stat-val">0.6609</div>
-          <div class="stat-label">KS · 2023 留出测试</div>
-        </div>
-        <div>
-          <div class="stat-val">66.93%</div>
-          <div class="stat-label">Recall@Top10%</div>
-        </div>
-        <div>
-          <div class="stat-val">22,814</div>
-          <div class="stat-label">建模面板 · 公司-年</div>
-        </div>
-        <div>
-          <div class="stat-val">3,629</div>
-          <div class="stat-label">制造业上市公司</div>
-        </div>
-        <div>
-          <div class="stat-val">36/80</div>
-          <div class="stat-label">入选 / 候选特征</div>
-        </div>
+        <div><div class="stat-val" data-stat="metrics.auc">0.8962</div><div class="stat-label">AUC · 2023 留出测试</div></div>
+        <div><div class="stat-val" data-stat="metrics.ks">0.6609</div><div class="stat-label">KS · 2023 留出测试</div></div>
+        <div><div class="stat-val" data-stat="metrics.recall_top10">66.93%</div><div class="stat-label">Recall@Top10%</div></div>
+        <div><div class="stat-val" data-stat="panel.rows">22,814</div><div class="stat-label">建模面板 · 公司-年</div></div>
+        <div><div class="stat-val" data-stat="panel.companies">3,629</div><div class="stat-label">制造业上市公司</div></div>
+        <div><div class="stat-val">36/80</div><div class="stat-label">入选 / 候选特征</div></div>
       </div>
       <p class="stats-note">
-        指标来自留出测试产物（run_id=20261114-213525-da08d92c，50 trials），与 run_manifest.json 的数据 SHA256 绑定；2024 锁箱待官方 ST 标签，不报告指标。
+        指标来自留出测试产物（run_id=<span data-stat="run_id">20261114-213525-da08d92c</span>，50 trials），与 run_manifest.json 的数据 SHA256 绑定；2024 锁箱待官方 ST 标签，不报告指标。
       </p>
     </div>
   </div>
 
-  <!-- ================= 双引擎智能研判 ================= -->
-  <section id="analyze">
+  <!-- ================= 平台截图 ================= -->
+  <section id="shots">
     <div class="wrap">
+      <h2 class="sec-title">平台<span class="grad-text">一览</span></h2>
+      <p class="sec-sub">Vue 3 SPA 七视图真实界面（深色主题 · ECharts 渲染）</p>
+      <div class="shots-grid reveal">
+        <a class="shot-card" href="docs/screenshots/dashboard.png" target="_blank" rel="noopener">
+          <div class="shot-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="t">数据看板 · 高风险 TOP12 / 风险排行</span></div>
+          <img src="docs/screenshots/dashboard.png" alt="数据看板" loading="lazy" />
+        </a>
+        <a class="shot-card" href="docs/screenshots/enterprise.png" target="_blank" rel="noopener">
+          <div class="shot-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="t">企业诊断 · SHAP 归因 / 智能研判</span></div>
+          <img src="docs/screenshots/enterprise.png" alt="企业诊断" loading="lazy" />
+        </a>
+        <a class="shot-card" href="docs/screenshots/enterprises.png" target="_blank" rel="noopener">
+          <div class="shot-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="t">企业列表 · 筛选与检索</span></div>
+          <img src="docs/screenshots/enterprises.png" alt="企业列表" loading="lazy" />
+        </a>
+        <a class="shot-card" href="docs/screenshots/alerts.png" target="_blank" rel="noopener">
+          <div class="shot-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="t">预警中心 · 生成 / 处置闭环</span></div>
+          <img src="docs/screenshots/alerts.png" alt="预警中心" loading="lazy" />
+        </a>
+        <a class="shot-card" href="docs/screenshots/explain.png" target="_blank" rel="noopener">
+          <div class="shot-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="t">模型解释 · 全局重要性 / 依赖效应</span></div>
+          <img src="docs/screenshots/explain.png" alt="模型解释" loading="lazy" />
+        </a>
+        <a class="shot-card" href="docs/screenshots/finance.png" target="_blank" rel="noopener">
+          <div class="shot-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="t">财务分析 · 杜邦 / Altman / 对标</span></div>
+          <img src="docs/screenshots/finance.png" alt="财务分析" loading="lazy" />
+        </a>
+        <a class="shot-card" href="docs/screenshots/report.png" target="_blank" rel="noopener">
+          <div class="shot-chrome"><span class="dots"><i></i><i></i><i></i></span><span class="t">报告导出 · PDF / Excel</span></div>
+          <img src="docs/screenshots/report.png" alt="报告导出" loading="lazy" />
+        </a>
+      </div>
+      <p class="shots-note">点击任意截图可查看原图 · 截图由真实后端数据（FastAPI + XGBoost 产物）驱动</p>
+    </div>
+  </section>
+
+  <!-- ================= 双引擎智能研判 ================= -->
+  <section id="analyze" style="background: var(--bg-elev); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+    <div class="wrap reveal">
       <h2 class="sec-title">双引擎<span class="grad-text">智能研判</span></h2>
       <p class="sec-sub">规则引擎保证下限，LLM 提升洞察上限，交叉校验确保结论可审计</p>
       <div class="analyze-flow">
-        <div class="af-node engine">
-          <h4>📊 规则六维评分</h4>
-          <p>财务 / 法律 / 舆情 / 经营<br />信用 / 供应链 量化打分</p>
-        </div>
+        <div class="af-node engine"><h4>📊 规则六维评分</h4><p>财务 / 法律 / 舆情 / 经营<br />信用 / 供应链 量化打分</p></div>
         <div class="af-arrow">＋</div>
-        <div class="af-node engine">
-          <h4>🤖 LLM 研判</h4>
-          <p>OpenAI 兼容网关<br />DeepSeek / vLLM 可切换</p>
-        </div>
+        <div class="af-node engine"><h4>🤖 LLM 研判</h4><p>OpenAI 兼容网关<br />DeepSeek / vLLM 可切换</p></div>
         <div class="af-arrow">→</div>
-        <div class="af-node check">
-          <h4>⚖️ 交叉校验</h4>
-          <p>一致 → 采信 LLM<br />不一致 → 以规则为准</p>
-        </div>
+        <div class="af-node check"><h4>⚖️ 交叉校验</h4><p>一致 → 采信 LLM<br />不一致 → 以规则为准</p></div>
         <div class="af-arrow">→</div>
-        <div class="af-node check">
-          <h4>🧾 证据链输出</h4>
-          <p>评级 + 一句话结论<br />+ 逐条证据（≤5 条）</p>
-        </div>
+        <div class="af-node check"><h4>🧾 证据链输出</h4><p>评级 + 一句话结论<br />+ 逐条证据（≤5 条）</p></div>
       </div>
       <div class="dims">
         <span class="dim-chip"><span class="num">D1</span>财务健康</span>
@@ -371,8 +496,8 @@
   </section>
 
   <!-- ================= 关键工程决策 ================= -->
-  <section id="decisions" style="background: var(--bg-elev); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
-    <div class="wrap">
+  <section id="decisions">
+    <div class="wrap reveal">
       <h2 class="sec-title">三个<span class="grad-text">关键工程决策</span></h2>
       <p class="sec-sub">金融风控场景下，严谨的方法论比模型精度本身更重要</p>
       <div class="decisions-grid">
@@ -399,18 +524,15 @@
   </section>
 
   <!-- ================= 双前端 ================= -->
-  <section id="frontends">
-    <div class="wrap">
+  <section id="frontends" style="background: var(--bg-elev); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+    <div class="wrap reveal">
       <h2 class="sec-title"><span class="grad-text">双前端</span>架构</h2>
       <p class="sec-sub">共用同一领域层 models/ 与 FastAPI 服务层，一份口径、两种形态</p>
       <div class="frontends">
         <div class="fe-card st">
           <div class="fe-head">
             <div class="fe-icon">🔥</div>
-            <div>
-              <h3>Streamlit</h3>
-              <div class="fe-role">快速原型 · 离线可用</div>
-            </div>
+            <div><h3>Streamlit</h3><div class="fe-role">快速原型 · 离线可用</div></div>
           </div>
           <ul>
             <li>五大模块：看板 / 诊断 / 批量预警 / 解释 / 报告</li>
@@ -423,10 +545,7 @@
         <div class="fe-card vue">
           <div class="fe-head">
             <div class="fe-icon">⚡</div>
-            <div>
-              <h3>Vue 3 SPA</h3>
-              <div class="fe-role">生产化前后端 · 专业大屏</div>
-            </div>
+            <div><h3>Vue 3 SPA</h3><div class="fe-role">生产化前后端 · 专业大屏</div></div>
           </div>
           <ul>
             <li>七视图：看板 / 企业列表 / 企业诊断 / 预警中心 / 解释 / 财务分析 / 报告</li>
@@ -441,95 +560,88 @@
   </section>
 
   <!-- ================= 功能模块 ================= -->
-  <section id="modules" style="background: var(--bg-elev); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <section id="modules">
     <div class="wrap">
       <h2 class="sec-title">八大<span class="grad-text">功能模块</span></h2>
       <p class="sec-sub">数据看板到报告导出，Vue 3 SPA 七视图 + 服务层全覆盖</p>
-      <div class="modules-grid">
-        <div class="module-card">
-          <div class="module-icon">📊</div>
-          <h3>数据看板</h3>
-          <p>行业风险分布、热力图、ST 趋势、TOP-N 高风险、数据质量监控</p>
+      <div class="modules-grid reveal">
+        <div class="module-card"><div class="module-icon">📊</div><h3>数据看板</h3><p>行业风险分布、热力图、ST 趋势、TOP-N 高风险、数据质量监控</p></div>
+        <div class="module-card"><div class="module-icon">🏢</div><h3>企业诊断</h3><p>风险评级、SHAP 归因瀑布、历史轨迹、一键 LLM 智能研判</p></div>
+        <div class="module-card"><div class="module-icon">🚨</div><h3>预警中心</h3><p>预警生成 → 状态处置 → 处置报告，SQLite 持久化闭环管理</p></div>
+        <div class="module-card"><div class="module-icon">🔍</div><h3>模型解释</h3><p>全局重要性、依赖效应、交互强度、五模型对比、PSI 漂移监控</p></div>
+        <div class="module-card"><div class="module-icon">📈</div><h3>财务分析</h3><p>杜邦分解、Altman Z/Z2、Piotroski、Beneish 与同业对标</p></div>
+        <div class="module-card"><div class="module-icon">⚖️</div><h3>规则六维评分</h3><p>财务 / 法律 / 舆情 / 经营 / 信用 / 供应链六维量化评级</p></div>
+        <div class="module-card"><div class="module-icon">📄</div><h3>报告导出</h3><p>PDF 诊断报告（内置中文字体）、批量 Excel、评估报告、数据字典</p></div>
+        <div class="module-card"><div class="module-icon">⚙️</div><h3>服务与工程</h3><p>FastAPI 全接口、Docker 一键部署、<span data-stat="tests">76</span> 项测试、运行清单留痕</p></div>
+      </div>
+      <div class="importance-card reveal">
+        <div>
+          <h3>🔍 全局特征重要性 Top 10</h3>
+          <p>TreeSHAP 平均绝对贡献度：偿债与盈利类指标主导风险判别，审计意见与文本情感提供增量信息。</p>
+          <p>数据与模型解释页同源，随训练产物自动更新。</p>
+          <div class="src">source: cache/shap_values.pkl → models.shap_analysis.global_importance</div>
         </div>
-        <div class="module-card">
-          <div class="module-icon">🏢</div>
-          <h3>企业诊断</h3>
-          <p>风险评级、SHAP 归因瀑布、历史轨迹、一键 LLM 智能研判</p>
-        </div>
-        <div class="module-card">
-          <div class="module-icon">🚨</div>
-          <h3>预警中心</h3>
-          <p>预警生成 → 状态处置 → 处置报告，SQLite 持久化闭环管理</p>
-        </div>
-        <div class="module-card">
-          <div class="module-icon">🔍</div>
-          <h3>模型解释</h3>
-          <p>全局重要性、依赖效应、交互强度、五模型对比、PSI 漂移监控</p>
-        </div>
-        <div class="module-card">
-          <div class="module-icon">📈</div>
-          <h3>财务分析</h3>
-          <p>杜邦分解、Altman Z/Z2、Piotroski、Beneish 与同业对标</p>
-        </div>
-        <div class="module-card">
-          <div class="module-icon">⚖️</div>
-          <h3>规则六维评分</h3>
-          <p>财务 / 法律 / 舆情 / 经营 / 信用 / 供应链六维量化评级</p>
-        </div>
-        <div class="module-card">
-          <div class="module-icon">📄</div>
-          <h3>报告导出</h3>
-          <p>PDF 诊断报告（内置中文字体）、批量 Excel、评估报告、数据字典</p>
-        </div>
-        <div class="module-card">
-          <div class="module-icon">⚙️</div>
-          <h3>服务与工程</h3>
-          <p>FastAPI 全接口、Docker 一键部署、76 项测试、运行清单留痕</p>
-        </div>
+        <div id="importance-chart" role="img" aria-label="全局特征重要性 Top 10 条形图"></div>
       </div>
     </div>
   </section>
 
   <!-- ================= 技术流水线 ================= -->
-  <section id="pipeline">
-    <div class="wrap">
+  <section id="pipeline" style="background: var(--bg-elev); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+    <div class="wrap reveal">
       <h2 class="sec-title">端到端<span class="grad-text">技术流水线</span></h2>
       <p class="sec-sub">数据分三层落地：下载区只读、暂存区规范、契约区稳定</p>
       <div class="pipeline">
-        <div class="pipe-node">
-          <div class="pipe-step">STEP 01</div>
-          <h4>数据采集</h4>
-          <p>CSMAR + 巨潮/东财<br />企查查爬虫</p>
-        </div>
+        <div class="pipe-node"><div class="pipe-step">STEP 01</div><h4>数据采集</h4><p>CSMAR + 巨潮/东财<br />企查查爬虫</p></div>
         <div class="pipe-arrow">→</div>
-        <div class="pipe-node">
-          <div class="pipe-step">STEP 02</div>
-          <h4>ETL 契约层</h4>
-          <p>质量校验 G0–G5<br />训练就绪体检</p>
-        </div>
+        <div class="pipe-node"><div class="pipe-step">STEP 02</div><h4>ETL 契约层</h4><p>质量校验 G0–G5<br />训练就绪体检</p></div>
         <div class="pipe-arrow">→</div>
-        <div class="pipe-node">
-          <div class="pipe-step">STEP 03</div>
-          <h4>特征工程</h4>
-          <p>80 维候选构造<br />四步筛选 → 36 维</p>
-        </div>
+        <div class="pipe-node"><div class="pipe-step">STEP 03</div><h4>特征工程</h4><p>80 维候选构造<br />四步筛选 → 36 维</p></div>
         <div class="pipe-arrow">→</div>
-        <div class="pipe-node">
-          <div class="pipe-step">STEP 04</div>
-          <h4>模型训练</h4>
-          <p>扩展窗口 CV<br />Optuna 五模型</p>
-        </div>
+        <div class="pipe-node"><div class="pipe-step">STEP 04</div><h4>模型训练</h4><p>扩展窗口 CV<br />Optuna 五模型</p></div>
         <div class="pipe-arrow">→</div>
-        <div class="pipe-node">
-          <div class="pipe-step">STEP 05</div>
-          <h4>SHAP 解释</h4>
-          <p>全局 / 局部 / 依赖<br />交互四维分析</p>
-        </div>
+        <div class="pipe-node"><div class="pipe-step">STEP 05</div><h4>SHAP 解释</h4><p>全局 / 局部 / 依赖<br />交互四维分析</p></div>
         <div class="pipe-arrow">→</div>
-        <div class="pipe-node">
-          <div class="pipe-step">STEP 06</div>
-          <h4>服务与研判</h4>
-          <p>FastAPI + 双前端<br />规则 + LLM 研判闭环</p>
+        <div class="pipe-node"><div class="pipe-step">STEP 06</div><h4>服务与研判</h4><p>FastAPI + 双前端<br />规则 + LLM 研判闭环</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 演进历程 ================= -->
+  <section id="timeline">
+    <div class="wrap reveal">
+      <h2 class="sec-title">演进<span class="grad-text">历程</span></h2>
+      <p class="sec-sub">从数据流水线到双前端智能研判平台（2026）</p>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-date">11-08</div>
+          <h4>项目启动</h4>
+          <p>确立 XGBoost + SHAP 技术路线，搭建依赖与工程骨架</p>
+        </div>
+        <div class="tl-item">
+          <div class="tl-date">11-11 / 11-12</div>
+          <h4>研究对象与文献定版</h4>
+          <p>聚焦沪深 A 股制造业，完成文献综述与理论奠基</p>
+        </div>
+        <div class="tl-item">
+          <div class="tl-date">11-13</div>
+          <h4>评估口径确立</h4>
+          <p>2023 留出测试 / 2024 锁箱切分，概率校准、成本阈值与 Top-k 复核</p>
+        </div>
+        <div class="tl-item">
+          <div class="tl-date">11-14</div>
+          <h4>模型定稿</h4>
+          <p>TreeSHAP 四维可解释性分析、80 维数据补全、Optuna 50 trials 训练</p>
+        </div>
+        <div class="tl-item">
+          <div class="tl-date">11-15</div>
+          <h4>展示层 Vue 化</h4>
+          <p>Streamlit → Vue 3 + ECharts 专业大屏，财务分析服务移植</p>
+        </div>
+        <div class="tl-item">
+          <div class="tl-date">11-17</div>
+          <h4>服务层扩展</h4>
+          <p>预警闭环、规则六维评分、数据源接入、LLM 智能研判上线</p>
         </div>
       </div>
     </div>
@@ -537,7 +649,7 @@
 
   <!-- ================= 快速开始 ================= -->
   <section id="quickstart" style="background: var(--bg-elev); border-top: 1px solid var(--border);">
-    <div class="wrap">
+    <div class="wrap reveal">
       <h2 class="sec-title">快速<span class="grad-text">开始</span></h2>
       <p class="sec-sub">演示模式 3 分钟跑通全链路，无需任何数据权限</p>
       <div class="quickstart-grid">
@@ -593,14 +705,247 @@
     <div class="wrap">
       <div class="links">
         <a href="README.md">README</a>
-        <a href="docs/FastAPI服务层设计.md">服务层设计</a>
-        <a href="docs/大屏平台开发设计方案.md">大屏方案</a>
+        <a href="docs/desgin/FastAPI服务层设计.md">服务层设计</a>
+        <a href="docs/desgin/大屏平台开发设计方案.md">大屏方案</a>
         <a href="docs/数据字典与特征口径.md">数据字典</a>
         <a href="LICENSE">MIT License</a>
       </div>
       <div>上市公司财务风险智能预警平台 · Financial Risk Warning Platform</div>
+      <div class="footer-meta">run_id: <span data-stat="run_id">20261114-213525-da08d92c</span> · 最近更新 <span data-stat="updated">2026-11-17</span></div>
     </div>
   </footer>
 
+  <button id="to-top" title="回到顶部" aria-label="回到顶部">↑</button>
+
+  <!-- ================= 数据块（由 scripts/build_homepage.py 注入，禁止手改） ================= -->
+  <!-- HOMEPAGE-DATA:BEGIN -->
+  <script type="application/json" id="page-data">
+{
+    "run_id": "20261114-213525-da08d92c",
+    "updated": "2026-11-17",
+    "metrics": {
+        "auc": "0.8962",
+        "ks": "0.6609",
+        "recall_top10": "66.93%",
+        "n_test": 3372,
+        "ece": "0.0126"
+    },
+    "panel": {
+        "rows": "22,814",
+        "companies": "3,629"
+    },
+    "features": {
+        "selected": 36,
+        "candidates": 80
+    },
+    "tests": 76,
+    "top_features": [
+        {
+            "name": "扣非净利润占比",
+            "value": 0.9168,
+            "norm": 1.0
+        },
+        {
+            "name": "每股收益",
+            "value": 0.6251,
+            "norm": 0.6818
+        },
+        {
+            "name": "审计意见类型",
+            "value": 0.502,
+            "norm": 0.5476
+        },
+        {
+            "name": "管理层持股比例",
+            "value": 0.2119,
+            "norm": 0.2311
+        },
+        {
+            "name": "净资产增长率",
+            "value": 0.2089,
+            "norm": 0.2279
+        },
+        {
+            "name": "情感极性",
+            "value": 0.1673,
+            "norm": 0.1825
+        },
+        {
+            "name": "MD&A负面情感得分",
+            "value": 0.1669,
+            "norm": 0.182
+        },
+        {
+            "name": "存货/总资产",
+            "value": 0.1565,
+            "norm": 0.1707
+        },
+        {
+            "name": "年换手率",
+            "value": 0.1524,
+            "norm": 0.1662
+        },
+        {
+            "name": "有息负债率",
+            "value": 0.1319,
+            "norm": 0.1439
+        }
+    ]
+}
+  </script>
+  <!-- HOMEPAGE-DATA:END -->
+
+  <script>
+    ;(function () {
+      'use strict'
+
+      /* ---------- 数据填充：数据块 → data-stat 元素 ---------- */
+      var data = {}
+      try { data = JSON.parse(document.getElementById('page-data').textContent) } catch (e) {}
+      function get(path) {
+        return path.split('.').reduce(function (o, k) { return o == null ? o : o[k] }, data)
+      }
+      document.querySelectorAll('[data-stat]').forEach(function (el) {
+        var v = get(el.dataset.stat)
+        if (v !== undefined && v !== null && v !== '') el.textContent = v
+      })
+
+      /* ---------- 主题切换（与 SPA 共用 frw-theme 协议） ---------- */
+      var themeBtn = document.getElementById('theme-btn')
+      function syncThemeBtn() {
+        themeBtn.textContent = document.documentElement.dataset.theme === 'light' ? '🌙' : '☀️'
+      }
+      themeBtn.addEventListener('click', function () {
+        var t = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'
+        document.documentElement.dataset.theme = t
+        try { localStorage.setItem('frw-theme', t) } catch (e) {}
+        syncThemeBtn()
+      })
+      syncThemeBtn()
+
+      /* ---------- 吸顶导航 + 回顶按钮 ---------- */
+      var nav = document.getElementById('topnav')
+      var toTop = document.getElementById('to-top')
+      var hero = document.querySelector('.hero')
+      function onScroll() {
+        var y = window.scrollY
+        nav.classList.toggle('show', y > hero.offsetHeight * 0.6)
+        toTop.classList.toggle('show', y > 600)
+      }
+      window.addEventListener('scroll', onScroll, { passive: true })
+      onScroll()
+      toTop.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }) })
+
+      /* ---------- 滚动侦测：当前板块高亮 ---------- */
+      var navLinks = document.querySelectorAll('[data-nav]')
+      if ('IntersectionObserver' in window) {
+        var spy = new IntersectionObserver(function (entries) {
+          entries.forEach(function (en) {
+            if (!en.isIntersecting) return
+            navLinks.forEach(function (a) {
+              a.classList.toggle('active', a.dataset.nav === en.target.id)
+            })
+          })
+        }, { rootMargin: '-20% 0px -60% 0px' })
+        ;['shots', 'analyze', 'frontends', 'modules', 'timeline', 'quickstart'].forEach(function (id) {
+          var el = document.getElementById(id)
+          if (el) spy.observe(el)
+        })
+
+        /* ---------- 滚动进入动画 ---------- */
+        var reveal = new IntersectionObserver(function (entries) {
+          entries.forEach(function (en) {
+            if (en.isIntersecting) { en.target.classList.add('in'); reveal.unobserve(en.target) }
+          })
+        }, { threshold: 0.08 })
+        document.querySelectorAll('.reveal').forEach(function (el) { reveal.observe(el) })
+      } else {
+        document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in') })
+      }
+
+      /* ---------- 全局特征重要性迷你图（SVG，数据驱动） ---------- */
+      var chart = document.getElementById('importance-chart')
+      var features = data.top_features || []
+      if (chart && features.length) {
+        var W = 560, rowH = 30, labelW = 132, valW = 52
+        var barMax = W - labelW - valW - 16
+        var H = features.length * rowH + 6
+        var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" font-family="Microsoft YaHei,sans-serif">'
+        features.forEach(function (f, i) {
+          var y = i * rowH + 4
+          var bw = Math.max(3, f.norm * barMax)
+          var color = i === 0 ? '#06b6d4' : '#2563eb'
+          svg += '<text x="' + (labelW - 8) + '" y="' + (y + 16) + '" text-anchor="end" font-size="12" fill="currentColor">' + f.name + '</text>'
+          svg += '<rect x="' + labelW + '" y="' + y + '" width="' + barMax + '" height="20" rx="4" fill="rgba(148,163,184,0.12)"/>'
+          svg += '<rect x="' + labelW + '" y="' + y + '" width="' + bw.toFixed(1) + '" height="20" rx="4" fill="' + color + '" opacity="0.85"/>'
+          svg += '<text x="' + (labelW + barMax + 8) + '" y="' + (y + 16) + '" font-size="11" fill="currentColor" opacity="0.7">' + f.value.toFixed(3) + '</text>'
+        })
+        svg += '</svg>'
+        chart.innerHTML = svg
+        chart.style.color = 'var(--text-sub)'
+      } else if (chart) {
+        chart.textContent = '重要性数据暂未生成，请运行 python scripts/build_homepage.py'
+      }
+
+      /* ---------- Hero 背景：轻量节点网络动画 ---------- */
+      var canvas = document.getElementById('hero-canvas')
+      var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (canvas && canvas.getContext && !reduced) {
+        var ctx = canvas.getContext('2d')
+        var nodes = [], running = true
+        var N = Math.min(42, Math.floor(window.innerWidth / 32))
+        function resizeCanvas() {
+          var dpr = window.devicePixelRatio || 1
+          canvas.width = canvas.offsetWidth * dpr
+          canvas.height = canvas.offsetHeight * dpr
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        }
+        resizeCanvas()
+        window.addEventListener('resize', resizeCanvas)
+        for (var i = 0; i < N; i++) {
+          nodes.push({
+            x: Math.random() * canvas.offsetWidth,
+            y: Math.random() * canvas.offsetHeight,
+            vx: (Math.random() - 0.5) * 0.35,
+            vy: (Math.random() - 0.5) * 0.35,
+          })
+        }
+        function tick() {
+          if (!running) return
+          var w = canvas.offsetWidth, h = canvas.offsetHeight
+          ctx.clearRect(0, 0, w, h)
+          var dark = document.documentElement.dataset.theme !== 'light'
+          var stroke = dark ? 'rgba(59,130,246,0.16)' : 'rgba(37,99,235,0.12)'
+          var fill = dark ? 'rgba(96,165,250,0.5)' : 'rgba(37,99,235,0.4)'
+          for (var i = 0; i < nodes.length; i++) {
+            var a = nodes[i]
+            a.x += a.vx; a.y += a.vy
+            if (a.x < 0 || a.x > w) a.vx *= -1
+            if (a.y < 0 || a.y > h) a.vy *= -1
+            for (var j = i + 1; j < nodes.length; j++) {
+              var b = nodes[j]
+              var dx = a.x - b.x, dy = a.y - b.y
+              if (dx * dx + dy * dy < 120 * 120) {
+                ctx.strokeStyle = stroke
+                ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke()
+              }
+            }
+            ctx.fillStyle = fill
+            ctx.beginPath(); ctx.arc(a.x, a.y, 1.8, 0, Math.PI * 2); ctx.fill()
+          }
+          requestAnimationFrame(tick)
+        }
+        // 滚出 Hero 后暂停，零无谓开销
+        if ('IntersectionObserver' in window) {
+          new IntersectionObserver(function (en) {
+            var vis = en[0].isIntersecting
+            if (vis && !running) { running = true; tick() }
+            running = vis
+          }).observe(hero)
+        }
+        tick()
+      }
+    })()
+  </script>
 </body>
 </html>
