@@ -345,8 +345,9 @@ financial-risk-warning-platform/
 │   ├── 数据缺口与补齐清单_20261114.md  # 当前缺口、补齐动作、验收（最新口径）
 │   ├── 数据治理与目录规范.md      #   分层目录、命名、清洗规则、质量门、激活流程
 │   ├── 数据字典与特征口径.md      #   由注册表自动生成
-│   ├── 论文_第1-4章.md / 论文_系统设计与实现.md / 论文_参考文献.md  # 论文正文稿
-│   ├── 论文_全文.docx             #   论文 Word 版（封面/声明/摘要/目录/正文/参考文献）
+│   ├── Attachment/               #   论文交付包：论文_第1-4章.md / 论文_系统设计与实现.md /
+│   │   │                         #   论文_参考文献.md（正文稿）+ 论文_全文.docx（Word 版）
+│   │   └── ...                   #   毕业设计模板/样本/任务书等附件
 │   ├── 文献与资料调研清单.md      #   49 项资源清单与获取状态
 │   ├── resources_catalog.csv     #   资源清单（机器可读）
 │   ├── batch_download_resources.py
@@ -507,7 +508,7 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | 7. 监控 | `python -m models.monitor` | `monitor_report.json`、`psi_detail.csv` |
 | 8. 平台 | `streamlit run streamlit_app/streamlit_app.py` | 五大模块可交互 |
 | 9. 测试 | `python -m pytest -q` | 76 passed |
-| 10. 论文 | `pandoc docs/论文_第1-4章.md docs/论文_系统设计与实现.md docs/论文_参考文献.md --lua-filter scripts/thesis_md2docx.lua --toc --standalone -o docs/论文_全文.docx` → `python scripts/postprocess_docx.py docs/论文_全文.docx` → `python scripts/add_front_matter.py docs/论文_全文.docx` | `论文_全文.docx`（封面/声明/摘要/目录/正文/参考文献） |
+| 10. 论文 | `pandoc docs/Attachment/论文_第1-4章.md docs/Attachment/论文_系统设计与实现.md docs/Attachment/论文_参考文献.md --lua-filter scripts/thesis_md2docx.lua --toc --standalone -o docs/Attachment/论文_全文.docx` → `python scripts/postprocess_docx.py docs/Attachment/论文_全文.docx` → `python scripts/add_front_matter.py docs/Attachment/论文_全文.docx` | `论文_全文.docx`（封面/声明/摘要/目录/正文/参考文献） |
 
 ---
 
@@ -531,10 +532,10 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | [`docs/平台功能与预测设计.md`](./docs/平台功能与预测设计.md) | 功能/预测/UI 设计、预测契约、现状缺陷清单、路线图 |
 | [`docs/FastAPI服务层设计.md`](./docs/FastAPI服务层设计.md) | API 契约、异常映射、部署、与前端集成方案 |
 | [`docs/前端架构与图表方案.md`](./docs/前端架构与图表方案.md) | Streamlit 壳 + FastAPI 服务层 + Plotly/ECharts 混合渲染、ECharts 本地化 |
-| [`docs/论文_系统设计与实现.md`](./docs/论文_系统设计与实现.md) | **论文正文稿**：第 5 章 系统设计与实现（总体架构/前端/服务/图表/选型） |
-| [`docs/论文_第1-4章.md`](./docs/论文_第1-4章.md) | **论文正文稿**：第 1–4 章（绪论含文献综述/相关技术/数据与特征/模型） |
-| [`docs/论文_参考文献.md`](./docs/论文_参考文献.md) | **论文参考文献**：GB/T 7714，正文 [1]–[14] 对应 |
-| [`docs/论文_全文.docx`](./docs/论文_全文.docx) | **论文 Word 版**：封面 + 原创性声明 + 第 1–5 章 + 参考文献，含目录、A4、宋体/黑体、三线表 |
+| [`docs/Attachment/论文_系统设计与实现.md`](./docs/Attachment/论文_系统设计与实现.md) | **论文正文稿**：第 5 章 系统设计与实现（总体架构/前端/服务/图表/选型） |
+| [`docs/Attachment/论文_第1-4章.md`](./docs/Attachment/论文_第1-4章.md) | **论文正文稿**：第 1–4 章（绪论含文献综述/相关技术/数据与特征/模型） |
+| [`docs/Attachment/论文_参考文献.md`](./docs/Attachment/论文_参考文献.md) | **论文参考文献**：GB/T 7714，正文 [1]–[14] 对应 |
+| [`docs/Attachment/论文_全文.docx`](./docs/Attachment/论文_全文.docx) | **论文 Word 版**：封面 + 原创性声明 + 第 1–5 章 + 参考文献，含目录、A4、宋体/黑体、三线表 |
 | [`docs/数据字典与特征口径.md`](./docs/数据字典与特征口径.md) | 80 维特征定义、数据表结构、缺失处理规则 |
 | [`docs/文献与资料调研清单.md`](./docs/文献与资料调研清单.md) | 49 项文献/代码/数据资源清单、检索策略、获取状态与缺口 |
 | [`docs/README_资源批量下载工具.md`](./docs/README_资源批量下载工具.md) | 批量下载工具使用说明 |
@@ -581,7 +582,7 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | SHAP 可解释性 | ✅ | 四维度分析 + 缓存 + Plotly 可视化 |
 | Streamlit 平台 | ✅ | 五大模块 + 报告导出 |
 | FastAPI 服务层 | ✅ | 评分/解释/监控 + 财务/规则/预警闭环接口 |
-| 论文文档 | ✅ | 第 1–5 章正文稿 + 参考文献 + Word 版（`docs/论文_全文.docx`） |
+| 论文文档 | ✅ | 第 1–5 章正文稿 + 参考文献 + Word 版（`docs/Attachment/论文_全文.docx`） |
 | 工程化 | ✅ | 76 项测试、Docker、Makefile、文档自动生成 |
 | 待办 | ⬜ | 2024 锁箱（等 2026 官方标签）、扣非净利润官方口径核验（FI_Indicators）、2025 MD&A 文本、在线增量更新、模型注册表（MLflow） |
 

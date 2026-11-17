@@ -92,7 +92,10 @@ def global_importance(top_n: int = Query(default=20, ge=5, le=100)) -> dict:
 
 @app.get("/explain/dependence")
 def dependence(feature: str = Query(...)) -> dict:
-    return services.dependence(feature)
+    try:
+        return services.dependence(feature)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
 
 @app.get("/explain/interactions")
@@ -102,7 +105,10 @@ def interactions(top_n: int = Query(default=8, ge=3, le=20)) -> dict:
 
 @app.get("/explain/{code}")
 def explain(code: str, year: int | None = Query(default=None)) -> dict:
-    return services.explain(code, year)
+    try:
+        return services.explain(code, year)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
 
 @app.get("/monitor/report")

@@ -25,7 +25,16 @@ export default defineConfig({
     proxy: Object.fromEntries(
       API_PREFIXES.map((prefix) => [
         prefix,
-        { target: 'http://127.0.0.1:8000', changeOrigin: true },
+        {
+          target: 'http://127.0.0.1:8000',
+          changeOrigin: true,
+          // 前缀会遮蔽同名 SPA 路由（如 /enterprises 命中 /enterprise 前缀、
+          // /alerts 直接返回 JSON）：浏览器文档请求改服务 index.html（SPA 接管路由），仅 XHR/fetch 走 API
+          bypass: (req) =>
+            (req.headers.accept ?? '').includes('text/html')
+              ? '/index.html'
+              : undefined,
+        },
       ]),
     ),
     watch: {

@@ -151,7 +151,11 @@ def global_importance(top_n: int = 20) -> dict:
 def dependence(feature: str) -> dict:
     from models.shap_analysis import dependence as _dep
 
-    return {"feature": feature, "items": _dep(feature).to_dict("records")}
+    df = _dep(feature)
+    # 依赖散点降采样：全量 2 万+ 点对前端过重，抽样 2000 点仍能呈现非线性拐点
+    if len(df) > 2000:
+        df = df.sample(2000, random_state=42)
+    return {"feature": feature, "items": df.to_dict("records")}
 
 
 def interactions(top_n: int = 8) -> dict:

@@ -29,7 +29,7 @@ ABSTRACT_ZH = ("财务风险的及时识别与预警对资本市场风险防控�
               "LightGBM 与 CatBoost 为对照。主模型在 2023 年留出测试集上 AUC 为 0.8962、PR-AUC 为 "
               "0.3986、Recall@Top10% 为 66.93%、校准后 ECE 为 0.0126。基于 TreeSHAP 的解释分析可从"
               "全局重要性、个体归因、依赖效应与交互效应四个维度揭示风险来源。最后，本文设计并实现了"
-              "基于 Streamlit 与 FastAPI 的交互式预警平台，验证了方法的工程化可行性。")
+              "Streamlit 与 Vue 3 双前端、FastAPI 服务层的交互式预警平台，验证了方法的工程化可行性。")
 KEYWORDS_ZH = "财务风险预警；XGBoost；TreeSHAP；特征工程；上市公司"
 
 ABSTRACT_EN = ("Timely identification and early warning of financial risk are of great significance to capital "
@@ -46,8 +46,9 @@ ABSTRACT_EN = ("Timely identification and early warning of financial risk are of
                "serve as baselines. The primary model achieves an AUC of 0.8962, PR-AUC of 0.3986, Recall@Top10% "
                "of 66.93% and a calibrated ECE of 0.0126 on the 2023 hold-out test set. TreeSHAP-based analysis "
                "reveals risk sources from global importance, individual attribution, dependence and interaction "
-               "effects. Finally, an interactive early-warning platform based on Streamlit and FastAPI is designed "
-               "and implemented, demonstrating the feasibility of engineering deployment.")
+               "effects. Finally, an interactive early-warning platform with dual frontends (Streamlit and Vue 3) "
+               "and a FastAPI service layer is designed and implemented, demonstrating the feasibility of "
+               "engineering deployment.")
 KEYWORDS_EN = "financial risk early warning; XGBoost; TreeSHAP; feature engineering; listed companies"
 
 INFO_LINES = [
