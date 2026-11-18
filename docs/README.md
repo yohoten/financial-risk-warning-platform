@@ -13,6 +13,24 @@
 | [深度实施方案](./desgin/上市公司财务风险智能预警平台_深度实施方案.md) | 14 周计划、数据/模型/系统三层设计、风险预案、**设计→代码映射** | ④ 动手前 |
 | [系统架构设计说明书](./desgin/系统架构设计说明书.md) | 分层架构、模块职责、数据契约、接口、质量属性、技术债 | ⑤ 开发与答辩 |
 | [平台使用与运维手册](./desgin/平台使用与运维手册.md) | 环境准备、五模块操作、更新 SOP、故障排查、演示脚本 | ⑥ 使用与答辩 |
+| [平台优化设计方案_用户权限与实时接入（2026-11-17）](./desgin/平台优化设计方案_用户权限与实时接入_20261117.md) | 登录/RBAC/审计/数据实时接入的差距分析与落地方案（角色权限矩阵、数据库 DDL、三通道接入、部署矩阵） | ⑦ 后端改造 |
+
+## 快速启动
+
+**本地开发联调**（后端 + 前端，详见根目录 [README](../README.md) 的「快速开始 → 0. 本地开发联调」）：
+
+```powershell
+# 终端 1：后端（务必用 python -m uvicorn，不要裸敲 uvicorn）
+cd D:\CodingEmber\financial-risk-warning-platform
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+# 终端 2：前端
+cd D:\CodingEmber\financial-risk-warning-platform\web
+npm install && npm run dev        # → http://localhost:5173
+```
+
+首次启动自动创建管理员 `admin / admin12345`（`RISK_ADMIN_PASSWORD` 可覆盖）。
 
 ## 二、数据与字段
 

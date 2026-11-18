@@ -1,488 +1,602 @@
 <script setup lang="ts">
+/** 金融分析面板：KPI / 趋势 / 杜邦 / Z-F-M 模型 / 异常勾稽 / 同业对标（完整复刻旧项目） */
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { EChartsOption } from 'echarts'
 
+import { api, type FinanceAnalysis, type FinanceOverviewRow, type FinanceTrendSeries, type RulesVerdictResp, type ScoredRow } from '../api'
 import BaseChart from '../components/BaseChart.vue'
-import { api, type FinanceAnalysis, type FinanceKpi, type FinanceOverviewRow, type FinanceTrendGroup } from '../api'
-import { fmtNum } from '../lib/levels'
+import { fmtPercent, gradeColor, riskColor } from '../lib/levels'
+import { globalFilter } from '../lib/store'
+import { C, chartTheme } from '../lib/theme'
 
 const route = useRoute()
 const router = useRouter()
-const code = computed(() => String(route.params.code || ''))
-const loading = ref(false)
-const error = ref('')
-const analysis = ref<FinanceAnalysis | null>(null)
+const currentCode = ref<string>('')
 const overview = ref<FinanceOverviewRow[]>([])
-const inputCode = ref('')
-const keyword = ref('')
+const years = ref(globalFilter.financeYears)
+const data = ref<FinanceAnalysis | null>(null)
+const model = ref<ScoredRow | null>(null)
+const rules = ref<RulesVerdictResp | null>(null)
+const loading = ref(false)
+const refreshing = ref(false)
+const error = ref('')
+const toast = ref('')
+const query = ref('')
+const pickerOpen = ref(false)
 
-const filteredOverview = computed(() => {
-  const k = keyword.value.trim().toLowerCase()
-  if (!k) return overview.value
-  return overview.value.filter(
-    (r) => r.name.toLowerCase().includes(k) || r.stock_code.includes(k) || r.industry.toLowerCase().includes(k),
-  )
+// 企业清单跨路由缓存：切换 tab 再回来时不再重复拉取/渲染 4000+ 条
+let _overviewCache: Promise<FinanceOverviewRow[]> | null = null
+
+const reportUrl = computed(() => (currentCode.value ? api.financeReportUrl(currentCode.value, years.value) : '#'))
+const reportDownloadUrl = computed(() => (currentCode.value ? api.financeReportUrl(currentCode.value, years.value, true) : '#'))
+
+const currentEnterprise = computed(() => overview.value.find((e) => e.stock_code === currentCode.value))
+const filtered = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  const src = overview.value
+  if (!q) return src.slice(0, 50)
+  return src.filter((e) => e.name.toLowerCase().includes(q) || e.stock_code.includes(q)
+    || (e.industry ?? '').toLowerCase().includes(q)).slice(0, 50)
 })
 
-const groupKpis = computed<Record<string, FinanceKpi[]>>(() => {
-  const out: Record<string, FinanceKpi[]> = {}
-  for (const kpi of analysis.value?.kpi ?? []) {
-    if (!out[kpi.group]) out[kpi.group] = []
-    out[kpi.group].push(kpi)
+async function loadOverview() {
+  try {
+    if (!_overviewCache) _overviewCache = api.financeOverview().then((r) => r.items)
+    overview.value = await _overviewCache
+    if (!currentCode.value) {
+      currentCode.value = overview.value.find((x) => x.has_finance)?.stock_code ?? overview.value[0]?.stock_code ?? ''
+    }
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
   }
-  return out
+}
+
+async function load() {
+  if (!currentCode.value) return
+  loading.value = true
+  error.value = ''
+  data.value = null
+  model.value = null
+  rules.value = null
+  try {
+    data.value = await api.financeAnalysis(currentCode.value, years.value)
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e)
+    loading.value = false
+    return
+  }
+  try {
+    model.value = (await api.predictCodes([currentCode.value])).items[0] ?? null
+  } catch {
+    model.value = null
+  }
+  try {
+    rules.value = await api.riskRules(currentCode.value)
+  } catch {
+    rules.value = null
+  }
+  loading.value = false
+}
+
+async function refresh() {
+  if (!currentCode.value) return
+  refreshing.value = true
+  toast.value = ''
+  try {
+    const r = await api.refreshEnterprise(currentCode.value)
+    toast.value = r.ok ? '财务数据已刷新（东财实时快照）' : `刷新失败：${r.error || '未知原因'}`
+  } catch (e) {
+    toast.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    refreshing.value = false
+  }
+}
+
+function selectCode() {
+  if (!currentCode.value) return
+  router.replace(`/finance/${currentCode.value}`)
+  load()
+}
+
+onMounted(async () => {
+  if (route.params.code) currentCode.value = String(route.params.code)
+  await loadOverview()
+  await load()
 })
 
-const groupLabels: Record<string, string> = {
-  scale: '规模', profit: '盈利能力', solvency: '偿债与杠杆',
-  operation: '营运效率', cashflow: '现金流质量', growth: '成长性',
+watch(years, (v) => {
+  globalFilter.financeYears = v
+  load()
+})
+watch(
+  () => route.params.code,
+  (c) => {
+    if (c && String(c) !== currentCode.value) {
+      currentCode.value = String(c)
+      load()
+    }
+  },
+)
+
+// ---------- 图表工具 ----------
+const yearsAxis = computed(() => data.value?.data_quality.periods.map((p) => p.year) ?? [])
+
+function seriesFor(key: string): FinanceTrendSeries | null {
+  for (const g of Object.values(data.value?.trends ?? {})) {
+    const s = g.series.find((x) => x.key === key)
+    if (s) return s
+  }
+  return null
 }
 
-function trendColor(kpi: FinanceKpi): string {
-  if (kpi.trend === 'up') return '#16a34a'
-  if (kpi.trend === 'down') return '#dc2626'
-  return '#94a3b8'
-}
-
-function trendArrow(kpi: FinanceKpi): string {
-  if (kpi.trend === 'up') return '↑'
-  if (kpi.trend === 'down') return '↓'
-  return '→'
-}
-
-function buildTrendOption(g: FinanceTrendGroup): EChartsOption {
-  const years = [...new Set(g.series.flatMap((s) => s.points.map((p) => p.year)))].sort()
+function mk(key: string, type: 'line' | 'bar', yAxisIndex = 0, color: string = C.primary) {
+  const s = seriesFor(key)
+  if (!s) return null
   return {
-    tooltip: { trigger: 'axis' },
-    legend: { textStyle: { color: '#94a3b8', fontSize: 11 }, top: 0 },
-    grid: { left: 8, right: 16, top: 28, bottom: 8, containLabel: true },
-    xAxis: { type: 'category', data: years, axisLabel: { color: '#94a3b8' } },
-    yAxis: { type: 'value', axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#24314f' } } },
-    series: g.series.map((s) => ({
-      name: s.label,
-      type: 'line',
-      smooth: true,
-      symbolSize: 5,
-      data: years.map((y) => s.points.find((p) => p.year === y)?.value ?? null),
-    })),
+    name: `${s.label}${s.unit ? `(${s.unit})` : ''}`,
+    type,
+    yAxisIndex,
+    data: s.points.map((p) => p.value),
+    smooth: type === 'line',
+    symbolSize: 6,
+    connectNulls: false,
+    itemStyle: { color },
+    lineStyle: { width: 2, color },
+    barMaxWidth: 26,
   }
 }
 
-const trendCharts = computed(() =>
-  Object.entries(analysis.value?.trends ?? {}).map(([key, g]) => ({ key, label: g.label, option: buildTrendOption(g) })),
+function baseOption(series: any[], dual: [string, string] | null = null): EChartsOption {
+  // 坐标轴/图例/tooltip 全部取自主题层，随浅色/深色自动切换
+  const t = chartTheme()
+  const ax = { fontSize: 11, color: t.axisText }
+  const line = { color: t.splitLine }
+  return {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: t.tooltipBg,
+      borderColor: t.tooltipBorder,
+      textStyle: { color: t.tooltipText, fontSize: 11 },
+      axisPointer: { lineStyle: { color: t.axisLine } },
+    },
+    legend: { top: 0, itemWidth: 12, itemHeight: 8, textStyle: { fontSize: 11, color: t.axisText } },
+    grid: { left: 52, right: dual ? 52 : 16, top: 32, bottom: 22 },
+    xAxis: { type: 'category', data: yearsAxis.value, axisLabel: ax, axisLine: { lineStyle: line } },
+    yAxis: dual
+      ? [
+          { type: 'value', name: dual[0], nameTextStyle: ax, axisLabel: ax, splitLine: { lineStyle: line } },
+          { type: 'value', name: dual[1], nameTextStyle: ax, axisLabel: ax, splitLine: { show: false } },
+        ]
+      : [{ type: 'value', axisLabel: ax, splitLine: { lineStyle: line } }],
+    series: series.filter(Boolean),
+  }
+}
+
+const scaleOption = computed<EChartsOption>(() =>
+  baseOption([mk('revenue', 'bar', 0, C.primary), mk('net_profit', 'line', 1, C.ok)], ['亿元', '亿元']),
+)
+const profitOption = computed<EChartsOption>(() =>
+  baseOption([
+    mk('gross_margin', 'line', 0, C.primary),
+    mk('net_margin', 'line', 0, C.accent),
+    mk('roe', 'line', 0, C.ok),
+    mk('roa', 'line', 0, C.violet),
+  ]),
+)
+const solvencyOption = computed<EChartsOption>(() =>
+  baseOption([mk('debt_ratio', 'line', 0, C.danger), mk('current_ratio', 'line', 1, C.primary), mk('quick_ratio', 'line', 1, C.accent)], ['%', '倍']),
+)
+const operationOption = computed<EChartsOption>(() =>
+  baseOption([mk('ar_days', 'line', 0, C.warn), mk('inventory_days', 'line', 0, C.violet), mk('asset_turnover', 'line', 1, C.primary)], ['天', '次']),
+)
+const cashflowOption = computed<EChartsOption>(() =>
+  baseOption([mk('ocf', 'bar', 0, C.ok), mk('ocf_to_profit', 'line', 1, C.primary)], ['亿元', '倍']),
+)
+const growthOption = computed<EChartsOption>(() =>
+  baseOption([mk('revenue_growth', 'bar', 0, C.primary), mk('profit_growth', 'bar', 0, C.accent)]),
 )
 
 const peerRadar = computed<EChartsOption>(() => {
-  const peers = analysis.value?.peers
-  if (!peers) return {}
-  const self = peers.rows.find((r) => r.is_self)
+  const p = data.value?.peers
+  const self = p?.rows.find((r) => r.is_self)
+  if (!p || !self?.percentiles) return {}
+  const t = chartTheme()
+  const keys = p.metrics.filter((m) => self.percentiles?.[m.key] != null)
   return {
-    tooltip: {},
-    radar: {
-      indicator: peers.metrics.map((m) => ({ name: m.label, max: 100 })),
-      radius: '60%',
-      axisName: { color: '#94a3b8', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#24314f' } },
-      splitArea: { areaStyle: { color: ['transparent'] } },
-      axisLine: { lineStyle: { color: '#24314f' } },
+    backgroundColor: 'transparent',
+    tooltip: {
+      backgroundColor: t.tooltipBg,
+      borderColor: t.tooltipBorder,
+      textStyle: { color: t.tooltipText, fontSize: 11 },
     },
-    series: [
-      {
-        type: 'radar',
-        data: [
-          {
-            value: peers.metrics.map((m) => self?.percentiles[m.key] ?? 0),
-            name: '本企业分位（越高越好）',
-            areaStyle: { color: 'rgba(37,99,235,0.22)' },
-            lineStyle: { color: '#2563eb', width: 2 },
-            itemStyle: { color: '#2563eb' },
-          },
-        ],
-      },
-    ],
+    radar: {
+      indicator: keys.map((m) => ({ name: m.label, max: 100 })),
+      radius: '62%',
+      center: ['50%', '54%'],
+      axisName: { fontSize: 10, color: t.radarAxis },
+      splitLine: { lineStyle: { color: t.radarSplit } },
+      splitArea: { areaStyle: { color: t.radarArea } },
+    },
+    series: [{
+      type: 'radar',
+      symbolSize: 5,
+      data: [{
+        value: keys.map((m) => self.percentiles?.[m.key] ?? 0),
+        name: '同业分位',
+        areaStyle: { color: 'rgba(37,99,235,0.22)' },
+        lineStyle: { color: C.primary, width: 2 },
+        itemStyle: { color: C.primary },
+      }],
+    }],
   }
 })
 
-function anomalyColor(level: string): string {
-  if (level === 'high') return '#dc2626'
-  if (level === 'medium') return '#ea580c'
-  return '#16a34a'
+const attributionMax = computed(() => {
+  const items = data.value?.dupont.attribution?.items ?? []
+  return Math.max(1, ...items.map((i) => Math.abs(i.contrib)))
+})
+
+function fmt(v: number | null | undefined, unit = '') {
+  if (v === null || v === undefined) return '—'
+  return `${v}${unit}`
 }
 
-function passIcon(pass: boolean | null): string {
-  if (pass === true) return '✓'
-  if (pass === false) return '✗'
-  return '?'
+function verdictColor(kind: string, verdict: string | null | undefined) {
+  if (!verdict) return C.gray
+  if (kind === 'beneish') return verdict.includes('嫌疑') ? C.danger : C.ok
+  if (verdict.includes('安全')) return C.ok
+  if (verdict.includes('灰色')) return C.warn
+  if (verdict.includes('困境')) return C.danger
+  return C.gray
 }
 
-async function loadAnalysis() {
-  if (!code.value) return
-  loading.value = true
-  error.value = ''
-  try {
-    analysis.value = await api.financeAnalysis(code.value)
-    overview.value = []
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
-  } finally {
-    loading.value = false
-  }
+function fScoreColor(score: number | null, max: number) {
+  if (score === null || !max) return C.gray
+  const r = score / max
+  return r >= 0.7 ? C.ok : r >= 0.4 ? C.warn : C.danger
 }
 
-async function loadOverview() {
-  loading.value = true
-  error.value = ''
-  try {
-    overview.value = (await api.financeOverview()).items
-    analysis.value = null
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
-  } finally {
-    loading.value = false
-  }
-}
-
-function goto(code: string) {
-  router.push(`/finance/${code}`)
-}
-
-function submit() {
-  const c = inputCode.value.trim().replace(/\.0$/, '').padStart(6, '0')
-  if (/^\d{6}$/.test(c)) goto(c)
-}
-
-onMounted(() => (code.value ? loadAnalysis() : loadOverview()))
-watch(code, (c) => (c ? loadAnalysis() : loadOverview()))
+const anomalyColor: Record<string, string> = { high: C.danger, medium: C.warn, low: C.gray }
+const anomalyLabel: Record<string, string> = { high: '高', medium: '中', low: '低' }
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-head">
-      <div>
-        <h2>财务分析</h2>
-        <p class="page-sub">
-          <template v-if="analysis">
-            {{ analysis.enterprise.name }}（{{ analysis.enterprise.stock_code }}）· {{ analysis.enterprise.industry }} · 最新 {{ analysis.latest_year }}
-          </template>
-          <template v-else>KPI · 趋势 · 杜邦分解 · Altman/Piotroski/Beneish · 同业对标 · 异常勾稽</template>
-        </p>
+  <div class="finance">
+    <div class="bar">
+      <div class="picker">
+        <input
+          v-model="query"
+          class="sel picker-input"
+          :placeholder="currentEnterprise ? `${currentEnterprise.name}（${currentEnterprise.stock_code}）` : '搜索企业名称 / 股票代码'"
+          @focus="pickerOpen = true"
+          @blur="pickerOpen = false"
+        />
+        <ul v-if="pickerOpen" class="picker-list">
+          <li v-for="e in filtered" :key="e.stock_code" class="picker-item" @mousedown.prevent="currentCode = e.stock_code; query = ''; selectCode()">
+            <span class="pi-name">{{ e.name }}</span>
+            <span class="pi-code">{{ e.stock_code }}</span>
+            <span class="pi-meta">{{ e.industry }} · {{ e.has_finance ? e.latest_year : '无财报' }}</span>
+          </li>
+          <li v-if="!filtered.length" class="picker-empty">无匹配企业</li>
+        </ul>
       </div>
-      <div class="toolbar">
-        <input v-model="inputCode" class="toolbar-input" placeholder="证券代码" @keyup.enter="submit" />
-        <button class="btn" @click="submit">分析</button>
-        <a v-if="code" class="btn" :href="api.financeReportUrl(code)" target="_blank">下载报告</a>
-      </div>
+      <select v-model.number="years" class="sel sm">
+        <option :value="3">近 3 年</option>
+        <option :value="5">近 5 年</option>
+        <option :value="8">近 8 年</option>
+      </select>
+      <button class="btn" :disabled="refreshing" @click="refresh">{{ refreshing ? '刷新中…' : '🔄 刷新' }}</button>
+      <a class="btn ghost" :href="reportUrl" target="_blank" rel="noopener">📄 报告预览</a>
+      <a class="btn ghost" :href="reportDownloadUrl" download>⬇ 报告下载</a>
     </div>
 
-    <p v-if="error" class="error-box">{{ error }}</p>
+    <div v-if="toast" class="toast">{{ toast }}</div>
+    <div v-if="error" class="err">{{ error }}</div>
+    <div v-if="loading" class="hint">加载中…</div>
 
-    <!-- 列表模式 -->
-    <div v-if="!code" class="card">
-      <div class="toolbar" style="margin-bottom: 8px">
-        <input v-model="keyword" class="toolbar-input" placeholder="按名称 / 代码 / 行业筛选" />
-      </div>
-      <table class="table">
-        <thead>
-          <tr>
-            <th>代码</th><th>企业名称</th><th>行业</th><th>营收(亿)</th><th>净利(亿)</th>
-            <th>营收增速</th><th>ROE</th><th>资产负债率</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="r in filteredOverview" :key="r.stock_code" class="clickable" @click="goto(r.stock_code)">
-            <td>{{ r.stock_code }}</td>
-            <td class="name">{{ r.name }}</td>
-            <td>{{ r.industry }}</td>
-            <td>{{ fmtNum(r.revenue) }}</td>
-            <td>{{ fmtNum(r.net_profit) }}</td>
-            <td>{{ r.revenue_growth != null ? r.revenue_growth.toFixed(1) + '%' : '—' }}</td>
-            <td>{{ r.roe != null ? r.roe.toFixed(1) + '%' : '—' }}</td>
-            <td>{{ r.debt_ratio != null ? r.debt_ratio.toFixed(1) + '%' : '—' }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-else-if="!data" class="hint">选择一家企业开始分析</div>
+
+    <div v-else-if="!data.available" class="empty">
+      <div class="empty-title">无财务数据</div>
+      <p>{{ data.reason }}</p>
+      <p class="sub">可点击「🔄 刷新」拉取公开财报；非上市企业无公开财报数据。</p>
     </div>
 
-    <!-- 分析详情模式 -->
-    <template v-else-if="analysis">
-      <div v-if="!analysis.available" class="card">
-        <p class="hint">{{ analysis.reason || '无财务数据' }}</p>
-      </div>
+    <template v-else>
+      <section class="hero">
+        <div class="hero-main">
+          <div class="hero-name">{{ data.enterprise.name }}</div>
+          <div class="hero-sub">
+            {{ data.enterprise.industry || '未标注行业' }}
+            <span v-if="data.enterprise.stock_code"> · {{ data.enterprise.stock_code }}</span>
+            · 最新 {{ data.latest_year }} 年报 · {{ data.data_quality.years }} 期
+          </div>
+        </div>
+        <div class="hero-chips">
+          <span v-if="model" class="chip" :style="{ borderColor: riskColor(model.risk_level), color: riskColor(model.risk_level) }">
+            模型 {{ fmtPercent(model.st_prob) }}
+          </span>
+          <span v-if="rules" class="chip" :style="{ borderColor: gradeColor(rules.grade), color: gradeColor(rules.grade) }">
+            评级 {{ rules.grade }}（{{ rules.grade_label }}）
+          </span>
+          <span class="chip" :style="{ borderColor: verdictColor('altman', data.models.altman.z2.verdict), color: verdictColor('altman', data.models.altman.z2.verdict) }">
+            Z'' {{ data.models.altman.z2.score ?? '—' }}
+          </span>
+          <span class="chip" :style="{ borderColor: fScoreColor(data.models.piotroski.score, data.models.piotroski.max_score), color: fScoreColor(data.models.piotroski.score, data.models.piotroski.max_score) }">
+            F {{ data.models.piotroski.score ?? '—' }}/{{ data.models.piotroski.max_score }}
+          </span>
+          <span class="chip" :style="{ borderColor: verdictColor('beneish', data.models.beneish.verdict), color: verdictColor('beneish', data.models.beneish.verdict) }">
+            M {{ data.models.beneish.score ?? '—' }}
+          </span>
+          <span class="chip" :style="{ borderColor: data.anomalies.length ? C.warn : C.ok, color: data.anomalies.length ? C.warn : C.ok }">
+            异常 {{ data.anomalies.length }}
+          </span>
+        </div>
+      </section>
 
-      <template v-else>
-        <!-- KPI -->
-        <div v-for="(kpis, g) in groupKpis" :key="g" class="card">
-          <div class="card-title">{{ groupLabels[g] ?? g }}</div>
-          <div class="kpi-grid">
-            <div v-for="kpi in kpis" :key="kpi.key" class="kpi">
-              <div class="kpi-label">{{ kpi.label }}</div>
-              <div class="kpi-value">
-                {{ kpi.value != null ? fmtNum(kpi.value) + ' ' + kpi.unit : '—' }}
-              </div>
-              <div class="kpi-yoy" v-if="kpi.value != null">
-                <span :style="{ color: trendColor(kpi) }">
-                  {{ trendArrow(kpi) }} 同比 {{ kpi.yoy != null ? kpi.yoy.toFixed(1) + '%' : '—' }}
-                </span>
-              </div>
+      <section>
+        <h4>关键指标</h4>
+        <div class="kpi-grid">
+          <div v-for="k in data.kpi" :key="k.key" class="kpi" :class="{ off: !k.available }">
+            <div class="kpi-label">{{ k.label }}</div>
+            <div class="kpi-value">{{ fmt(k.value) }}<span class="unit">{{ k.unit }}</span></div>
+            <div class="kpi-foot">
+              <span v-if="k.yoy !== null" class="yoy" :class="k.trend">
+                {{ k.yoy > 0 ? '↑' : k.yoy < 0 ? '↓' : '—' }} {{ Math.abs(k.yoy) }}%
+              </span>
+              <span v-else class="yoy flat">无同比</span>
+              <span class="prev" v-if="k.prev !== null">上期 {{ fmt(k.prev) }}</span>
             </div>
           </div>
         </div>
+      </section>
 
-        <!-- 趋势 -->
-        <div class="grid">
-          <div v-for="tc in trendCharts" :key="tc.key" class="card">
-            <div class="card-title">{{ tc.label }}</div>
-            <BaseChart :option="tc.option" height="240px" />
+      <section>
+        <h4>趋势分析</h4>
+        <div class="charts">
+          <div class="chart-card"><div class="chart-title">规模与利润</div><BaseChart :option="scaleOption" height="220px" /></div>
+          <div class="chart-card"><div class="chart-title">盈利能力（%）</div><BaseChart :option="profitOption" height="220px" /></div>
+          <div class="chart-card"><div class="chart-title">偿债与杠杆</div><BaseChart :option="solvencyOption" height="220px" /></div>
+          <div class="chart-card"><div class="chart-title">营运效率</div><BaseChart :option="operationOption" height="220px" /></div>
+          <div class="chart-card"><div class="chart-title">现金流质量</div><BaseChart :option="cashflowOption" height="220px" /></div>
+          <div class="chart-card"><div class="chart-title">成长性（%）</div><BaseChart :option="growthOption" height="220px" /></div>
+        </div>
+      </section>
+
+      <section>
+        <h4>杜邦分解</h4>
+        <p class="formula">{{ data.dupont.formula }}</p>
+        <table class="tbl">
+          <thead>
+            <tr><th>年度</th><th>ROE(%)</th><th>销售净利率(%)</th><th>总资产周转率</th><th>权益乘数</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in data.dupont.rows" :key="r.year">
+              <td>{{ r.year }}</td>
+              <td>{{ fmt(r.roe) }}</td>
+              <td>{{ fmt(r.net_margin) }}</td>
+              <td>{{ fmt(r.asset_turnover) }}</td>
+              <td>{{ fmt(r.equity_multiplier) }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="data.dupont.attribution" class="attr">
+          <div class="attr-head">
+            {{ data.dupont.attribution.from_year }} → {{ data.dupont.attribution.to_year }}
+            ROE 变动 <b>{{ data.dupont.attribution.roe_delta }}</b> 个百分点，归因：
+          </div>
+          <div v-for="it in data.dupont.attribution.items" :key="it.key" class="attr-row">
+            <span class="attr-label">{{ it.label }}</span>
+            <div class="attr-bar"><i :style="{ width: `${(Math.abs(it.contrib) / attributionMax) * 100}%`, background: it.contrib >= 0 ? C.ok : C.danger }"></i></div>
+            <span class="attr-val" :style="{ color: it.contrib >= 0 ? C.ok : C.danger }">{{ it.contrib > 0 ? '+' : '' }}{{ it.contrib }}</span>
           </div>
         </div>
+      </section>
 
-        <!-- 杜邦 -->
-        <div class="card">
-          <div class="card-title">杜邦分解：{{ analysis.dupont.formula }}</div>
-          <table class="table">
-            <thead>
-              <tr><th>年份</th><th>ROE(%)</th><th>净利率(%)</th><th>周转率</th><th>权益乘数</th></tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in analysis.dupont.rows" :key="row.year">
-                <td>{{ row.year }}</td>
-                <td>{{ fmtNum(row.roe) }}</td>
-                <td>{{ fmtNum(row.net_margin) }}</td>
-                <td>{{ fmtNum(row.asset_turnover, 4) }}</td>
-                <td>{{ fmtNum(row.equity_multiplier, 4) }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <div v-if="analysis.dupont.attribution" class="attribution">
-            <p class="hint">
-              ROE 变动 {{ analysis.dupont.attribution.from_year }}→{{ analysis.dupont.attribution.to_year }}：
-              {{ fmtNum(analysis.dupont.attribution.roe_delta) }} 个百分点
-            </p>
-            <div v-for="it in analysis.dupont.attribution.items" :key="it.key" class="att-row">
-              <span class="att-label">{{ it.label }}</span>
-              <div class="att-bar">
-                <div class="att-fill" :style="{ width: Math.min(Math.abs(it.contrib) * 4, 100) + '%', background: it.contrib >= 0 ? '#dc2626' : '#16a34a' }"></div>
-              </div>
-              <span class="att-val">{{ it.contrib >= 0 ? '+' : '' }}{{ fmtNum(it.contrib) }}pp</span>
+      <section>
+        <h4>财务预警模型</h4>
+        <div class="models">
+          <div class="model" v-for="m in [
+            { key: 'z2', title: 'Altman Z\'\'-Score', sub: '非制造业/新兴市场口径', score: data.models.altman.z2.score, verdict: data.models.altman.z2.verdict, thresholds: data.models.altman.z2.thresholds, missing: data.models.altman.z2.missing, note: data.models.altman.z2.note },
+            { key: 'z', title: 'Altman Z-Score', sub: '上市制造业口径（需市值）', score: data.models.altman.z.score, verdict: data.models.altman.z.verdict, thresholds: data.models.altman.z.thresholds, missing: data.models.altman.z.missing, note: data.models.altman.z.note },
+          ]" :key="m.key">
+            <div class="model-head">
+              <span class="model-title">{{ m.title }}</span>
+              <span class="model-score" :style="{ color: verdictColor('altman', m.verdict) }">{{ m.score ?? '不可计算' }}</span>
             </div>
-          </div>
-        </div>
-
-        <!-- 财务预警模型 -->
-        <div class="grid3">
-          <div class="card">
-            <div class="card-title">Altman Z-Score</div>
-            <p v-if="!analysis.models.altman.z.available" class="hint">{{ analysis.models.altman.z.note }}</p>
-            <template v-else>
-              <div class="model-score">{{ fmtNum(analysis.models.altman.z.score, 3) }}</div>
-              <p class="hint">{{ analysis.models.altman.z.verdict }} · {{ analysis.models.altman.z.thresholds }}</p>
-            </template>
-            <p class="hint">
-              Z''-Score：
-              <template v-if="analysis.models.altman.z2.available">
-                {{ fmtNum(analysis.models.altman.z2.score, 3) }}（{{ analysis.models.altman.z2.verdict }}）
-              </template>
-              <template v-else>{{ analysis.models.altman.z2.note }}</template>
-            </p>
+            <div class="model-sub">{{ m.sub }}</div>
+            <div v-if="m.verdict" class="model-verdict" :style="{ color: verdictColor('altman', m.verdict) }">{{ m.verdict }}</div>
+            <div class="model-thresholds">{{ m.thresholds }}</div>
+            <div v-if="!m.score && m.missing?.length" class="model-missing">缺：{{ m.missing.join('、') }}</div>
           </div>
 
-          <div class="card">
-            <div class="card-title">Piotroski F-Score</div>
-            <p v-if="!analysis.models.piotroski.available" class="hint">{{ analysis.models.piotroski.reason ?? '不可用' }}</p>
-            <template v-else>
-              <div class="model-score">{{ analysis.models.piotroski.score }}<span class="hint"> / {{ analysis.models.piotroski.max_score }}</span></div>
-              <p class="hint">{{ analysis.models.piotroski.verdict }}</p>
-            </template>
-            <ul class="signal-list">
-              <li v-for="s in analysis.models.piotroski.signals" :key="s.name">
-                <span class="pass" :style="{ color: s.pass === true ? '#16a34a' : s.pass === false ? '#dc2626' : '#94a3b8' }">{{ passIcon(s.pass) }}</span>
-                <span>{{ s.name }}</span>
+          <div class="model">
+            <div class="model-head">
+              <span class="model-title">Piotroski F-Score</span>
+              <span class="model-score" :style="{ color: fScoreColor(data.models.piotroski.score, data.models.piotroski.max_score) }">
+                {{ data.models.piotroski.score ?? '—' }}/{{ data.models.piotroski.max_score }}
+              </span>
+            </div>
+            <div class="model-sub">{{ data.models.piotroski.verdict || '需要连续两期财报' }}</div>
+            <ul class="signals">
+              <li v-for="s in data.models.piotroski.signals" :key="s.name" :class="{ fail: s.pass === false, na: s.pass === null }">
+                <span class="sig-icon">{{ s.pass === true ? '✓' : s.pass === false ? '✗' : '·' }}</span>
+                <span class="sig-name">{{ s.name }}</span>
+                <span class="sig-detail">{{ s.detail }}</span>
               </li>
             </ul>
+            <div v-if="data.models.piotroski.note" class="model-note">{{ data.models.piotroski.note }}</div>
           </div>
 
-          <div class="card">
-            <div class="card-title">Beneish M-Score</div>
-            <p v-if="!analysis.models.beneish.available" class="hint">不可用：{{ analysis.models.beneish.missing.join('、') }}</p>
-            <template v-else>
-              <div class="model-score">{{ fmtNum(analysis.models.beneish.score, 3) }}</div>
-              <p class="hint">{{ analysis.models.beneish.verdict }}</p>
-            </template>
-            <p v-if="analysis.models.beneish.note" class="hint">{{ analysis.models.beneish.note }}</p>
-          </div>
-        </div>
-
-        <!-- 同业对标 -->
-        <div class="grid">
-          <div class="card" v-if="analysis.peers?.rows.length">
-            <div class="card-title">同业对标（{{ analysis.peers.industry }}）</div>
-            <BaseChart :option="peerRadar" height="300px" />
-            <p class="hint">{{ analysis.peers.note }}</p>
-          </div>
-          <div class="card">
-            <div class="card-title">异常勾稽信号</div>
-            <ul v-if="analysis.anomalies.length" class="anomaly-list">
-              <li v-for="a in analysis.anomalies" :key="a.code">
-                <span class="chip" :style="{ background: anomalyColor(a.level) }">{{ a.level }}</span>
-                <div>
-                  <div class="a-title">{{ a.title }}</div>
-                  <div class="a-detail">{{ a.detail }}</div>
-                </div>
+          <div class="model">
+            <div class="model-head">
+              <span class="model-title">Beneish M-Score</span>
+              <span class="model-score" :style="{ color: verdictColor('beneish', data.models.beneish.verdict) }">
+                {{ data.models.beneish.score ?? '不可计算' }}
+              </span>
+            </div>
+            <div class="model-sub" :style="{ color: verdictColor('beneish', data.models.beneish.verdict) }">
+              {{ data.models.beneish.verdict || '需要连续两期财报' }}
+            </div>
+            <div class="model-thresholds">{{ data.models.beneish.thresholds }}</div>
+            <ul class="signals">
+              <li v-for="i in data.models.beneish.indices" :key="i.key" :class="{ na: i.value === null }">
+                <span class="sig-icon">{{ i.value === null ? '·' : i.source === 'approx' ? '≈' : '•' }}</span>
+                <span class="sig-name">{{ i.label }}</span>
+                <span class="sig-detail">{{ i.value ?? '缺' }}</span>
               </li>
             </ul>
-            <p v-else class="hint">未发现明显异常勾稽信号。</p>
+            <div v-if="data.models.beneish.note" class="model-note">{{ data.models.beneish.note }}</div>
           </div>
         </div>
+      </section>
 
-        <div class="card" v-if="analysis.data_quality.notes.length">
-          <div class="card-title">数据质量说明</div>
-          <ul class="hint">
-            <li v-for="(n, i) in analysis.data_quality.notes" :key="i">{{ n }}</li>
-          </ul>
+      <section>
+        <h4>异常勾稽</h4>
+        <div v-if="!data.anomalies.length" class="hint ok-hint">在现有数据范围内未触发异常规则</div>
+        <div v-for="a in data.anomalies" :key="a.code" class="anomaly" :style="{ borderLeftColor: anomalyColor[a.level] }">
+          <div class="anomaly-head">
+            <span class="lvl" :style="{ background: anomalyColor[a.level] }">{{ anomalyLabel[a.level] }}</span>
+            <span class="anomaly-title">{{ a.title }}</span>
+          </div>
+          <div class="anomaly-detail">{{ a.detail }}</div>
         </div>
-      </template>
+      </section>
+
+      <section v-if="data.peers && data.peers.rows.length > 1">
+        <h4>同业对标</h4>
+        <div class="peer-note">{{ data.peers.note }}</div>
+        <div class="peer-wrap">
+          <div class="peer-radar"><BaseChart :option="peerRadar" height="240px" /></div>
+          <div class="peer-tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr><th>企业</th><th v-for="m in data.peers.metrics" :key="m.key">{{ m.label }}</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="r in data.peers.rows" :key="r.stock_code" :class="{ self: r.is_self }">
+                  <td>{{ r.name }}</td>
+                  <td v-for="m in data.peers.metrics" :key="m.key">
+                    {{ fmt(r.metrics[m.key]) }}
+                    <span v-if="r.percentiles && r.percentiles[m.key] != null" class="pct"
+                      :style="{ color: (r.percentiles[m.key] ?? 0) >= 75 ? C.ok : (r.percentiles[m.key] ?? 0) <= 25 ? C.danger : C.gray }">{{ r.percentiles[m.key] }}%</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="quality">
+        <h4>数据说明</h4>
+        <div class="q-row"><span class="q-key">来源</span><span>{{ [...new Set(data.data_quality.periods.map((p) => p.source))].join('；') || '—' }}</span></div>
+        <div class="q-row" v-if="data.data_quality.missing_metrics.length"><span class="q-key">全期缺失</span><span>{{ data.data_quality.missing_metrics.join('、') }}</span></div>
+        <div class="q-row" v-for="(n, i) in data.data_quality.notes" :key="i"><span class="q-key">提示</span><span>{{ n }}</span></div>
+        <p class="disclaimer">数据来自公开信源，模型结果为规则化测算，不构成投资建议。</p>
+      </section>
     </template>
-
-    <p v-else-if="!loading" class="hint">输入证券代码开始财务分析。</p>
   </div>
 </template>
 
 <style scoped>
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
+.finance { color: var(--text); font-size: 13px; }
+.bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.sel { flex: 1; min-width: 140px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-elev); color: var(--text); font-size: 12.5px; }
+.sel.sm { flex: 0 0 auto; min-width: 88px; }
+.picker { position: relative; flex: 1; min-width: 200px; }
+.picker-input { width: 100%; }
+.picker-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 320px; overflow-y: auto; margin: 0; padding: 4px; list-style: none; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); z-index: 40; }
+.picker-item { display: flex; align-items: baseline; gap: 8px; padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 12.5px; }
+.picker-item:hover { background: var(--hover); }
+.pi-name { font-weight: 600; }
+.pi-code { color: var(--primary); font-size: 11px; flex: none; }
+.pi-meta { margin-left: auto; color: var(--text-sub); font-size: 11px; }
+.picker-empty { padding: 8px 10px; color: var(--text-sub); font-size: 12px; }
+.btn { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-elev); color: var(--text); cursor: pointer; font-size: 12.5px; text-decoration: none; }
+.btn:hover { background: var(--hover); }
+.btn:disabled { opacity: 0.6; cursor: default; }
+.btn.ghost { color: var(--primary); border-color: var(--primary); }
+.toast { margin: 6px 0; padding: 6px 10px; border-radius: 6px; background: var(--hover); color: var(--text-sub); font-size: 12px; }
+.err { margin: 8px 0; color: var(--danger); }
+.hint { color: var(--text-sub); padding: 12px 0; }
+.ok-hint { color: var(--ok); }
+.empty { padding: 18px; border: 1px dashed var(--border); border-radius: 8px; }
+.empty-title { font-weight: 600; margin-bottom: 6px; }
+.empty .sub { color: var(--text-sub); font-size: 12px; }
 
-.kpi {
-  border: 1px solid var(--border-soft);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
+.hero { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); box-shadow: var(--shadow); margin-bottom: 14px; }
+.hero-name { font-size: 15px; font-weight: 600; }
+.hero-sub { color: var(--text-sub); font-size: 12px; margin-top: 2px; }
+.hero-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.chip { padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; font-size: 11.5px; white-space: nowrap; }
 
-.kpi-label {
-  font-size: 12px;
-  color: var(--text-sub);
-}
+section { margin-bottom: 16px; }
+h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--text); border-left: 3px solid var(--primary); padding-left: 8px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); gap: 8px; }
+.kpi { padding: 8px 10px; border: 1px solid var(--border-soft); border-radius: 8px; background: var(--card); }
+.kpi.off { opacity: 0.5; }
+.kpi-label { color: var(--text-sub); font-size: 11.5px; }
+.kpi-value { font-size: 16px; font-weight: 600; margin: 3px 0; }
+.kpi-value .unit { font-size: 10.5px; color: var(--text-sub); margin-left: 3px; font-weight: 400; }
+.kpi-foot { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-sub); }
+.yoy.up { color: var(--ok); }
+.yoy.down { color: var(--danger); }
+.yoy.flat { color: var(--text-sub); }
 
-.kpi-value {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 2px 0;
-}
+.charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.chart-card { border: 1px solid var(--border-soft); border-radius: 8px; padding: 8px 6px 2px; background: var(--card); }
+.chart-title { font-size: 12px; color: var(--text-sub); padding-left: 8px; }
 
-.kpi-yoy {
-  font-size: 11.5px;
-}
+.formula { color: var(--text-sub); font-size: 12px; margin: 0 0 6px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tbl th, .tbl td { border-bottom: 1px solid var(--border-soft); padding: 5px 6px; text-align: right; }
+.tbl th:first-child, .tbl td:first-child { text-align: left; }
+.tbl th { color: var(--text-sub); font-weight: 500; }
+.tbl tr.self { background: var(--hover); font-weight: 600; }
+.pct { font-size: 10.5px; color: var(--text-sub); margin-left: 3px; }
 
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  align-items: start;
-}
+.attr { margin-top: 10px; }
+.attr-head { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; }
+.attr-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 12px; }
+.attr-label { flex: 0 0 108px; color: var(--text-sub); }
+.attr-bar { flex: 1; height: 8px; background: var(--hover); border-radius: 4px; overflow: hidden; }
+.attr-bar i { display: block; height: 100%; }
+.attr-val { flex: 0 0 46px; text-align: right; }
 
-.grid3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  align-items: start;
-}
+.models { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.model { border: 1px solid var(--border-soft); border-radius: 8px; padding: 9px 10px; background: var(--card); }
+.model-head { display: flex; justify-content: space-between; align-items: baseline; }
+.model-title { font-weight: 600; font-size: 12.5px; }
+.model-score { font-size: 15px; font-weight: 700; }
+.model-sub { color: var(--text-sub); font-size: 11.5px; margin: 2px 0 4px; }
+.model-verdict { font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+.model-thresholds { color: var(--text-sub); font-size: 11px; }
+.model-missing { color: var(--warn); font-size: 11px; margin-top: 3px; }
+.model-note { color: var(--warn); font-size: 11px; margin-top: 5px; }
+.signals { list-style: none; padding: 0; margin: 6px 0 0; }
+.signals li { display: flex; gap: 5px; font-size: 11.5px; padding: 2px 0; align-items: baseline; }
+.signals li.fail .sig-name { color: var(--danger); }
+.signals li.na { opacity: 0.55; }
+.sig-icon { width: 12px; text-align: center; }
+.sig-name { flex: 0 0 auto; }
+.sig-detail { color: var(--text-sub); margin-left: auto; text-align: right; }
 
-.attribution {
-  margin-top: 10px;
-}
+.anomaly { border: 1px solid var(--border-soft); border-left: 3px solid var(--warn); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: var(--card); }
+.anomaly-head { display: flex; gap: 6px; align-items: center; }
+.lvl { color: #fff; font-size: 10.5px; padding: 1px 6px; border-radius: 4px; }
+.anomaly-title { font-weight: 600; font-size: 12.5px; }
+.anomaly-detail { color: var(--text-sub); font-size: 12px; margin-top: 4px; line-height: 1.55; }
 
-.att-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 6px 0;
-}
+.peer-note { color: var(--text-sub); font-size: 11.5px; margin-bottom: 8px; }
+.peer-wrap { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.6fr); gap: 10px; }
+@media (max-width: 900px) { .peer-wrap { grid-template-columns: 1fr; } }
+.peer-tbl-wrap { overflow-x: auto; }
 
-.att-label {
-  width: 120px;
-  font-size: 12.5px;
-  color: var(--text-sub);
-}
-
-.att-bar {
-  flex: 1;
-  height: 8px;
-  background: var(--border-soft);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.att-fill {
-  height: 100%;
-  border-radius: 999px;
-}
-
-.att-val {
-  width: 80px;
-  font-size: 12px;
-  text-align: right;
-}
-
-.model-score {
-  font-size: 26px;
-  font-weight: 700;
-}
-
-.signal-list,
-.anomaly-list {
-  list-style: none;
-  margin: 8px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 12.5px;
-}
-
-.signal-list li {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-}
-
-.pass {
-  font-weight: 700;
-  width: 16px;
-}
-
-.anomaly-list li {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  border-bottom: 1px dashed var(--border-soft);
-  padding-bottom: 6px;
-}
-
-.a-title {
-  font-weight: 600;
-}
-
-.a-detail {
-  font-size: 12px;
-  color: var(--text-sub);
-}
-
-@media (max-width: 1100px) {
-  .kpi-grid,
-  .grid,
-  .grid3 {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (max-width: 700px) {
-  .kpi-grid,
-  .grid,
-  .grid3 {
-    grid-template-columns: 1fr;
-  }
-}
+.quality { border-top: 1px dashed var(--border); padding-top: 10px; }
+.q-row { display: flex; gap: 8px; font-size: 11.5px; color: var(--text-sub); margin-bottom: 3px; }
+.q-key { flex: 0 0 56px; color: var(--text); }
+.disclaimer { color: var(--text-sub); font-size: 11px; margin-top: 8px; font-style: italic; }
 </style>

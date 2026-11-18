@@ -22,6 +22,7 @@ PAGES = [
     "streamlit_app/pages/3_批量预警.py",
     "streamlit_app/pages/4_模型解释.py",
     "streamlit_app/pages/5_报告导出.py",
+    "streamlit_app/pages/6_金融分析.py",
 ]
 
 

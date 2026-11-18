@@ -66,3 +66,27 @@ def global_importance(top_n: int = 20) -> dict:
 
 def monitor_report() -> dict:
     return _get("/monitor/report")
+
+
+def finance_overview() -> dict:
+    return _get("/finance/overview")
+
+
+def finance_analysis(code: str, years: int = 5, peers: bool = True) -> dict:
+    return _get(f"/finance/{code}/analysis", years=years, peers=str(peers).lower())
+
+
+def risk_rules(code: str) -> dict:
+    return _get(f"/risk/rules/{code}")
+
+
+def refresh_enterprise(code: str) -> dict:
+    return _post(f"/enterprise/{code}/refresh", {})
+
+
+def finance_report(code: str, years: int = 5) -> str:
+    """下载 Markdown 报告原文（text/markdown）。"""
+    with _client() as c:
+        resp = c.get(f"/finance/{code}/report", params={"years": years})
+        _raise_for(resp)
+        return resp.text

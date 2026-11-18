@@ -6,6 +6,7 @@ import type { EChartsOption } from 'echarts'
 import BaseChart from '../components/BaseChart.vue'
 import { api, type ScoredRow } from '../api'
 import { fmtPercent, riskColor } from '../lib/levels'
+import { chartTheme } from '../lib/theme'
 
 const router = useRouter()
 const items = ref<ScoredRow[]>([])
@@ -21,17 +22,27 @@ const industryCount = computed(() => new Set(items.value.map((i) => i.industry))
 
 const chartOption = computed<EChartsOption>(() => {
   const rows = sorted.value.slice(0, 12).reverse()
+  const t = chartTheme()
   return {
+    backgroundColor: 'transparent',
     tooltip: {
       trigger: 'axis',
       valueFormatter: (v) => fmtPercent(Number(v)),
+      backgroundColor: t.tooltipBg,
+      borderColor: t.tooltipBorder,
+      textStyle: { color: t.tooltipText, fontSize: 11 },
     },
     grid: { left: 8, right: 24, top: 8, bottom: 8, containLabel: true },
-    xAxis: { type: 'value', max: 1, axisLabel: { formatter: (v: number) => `${(v * 100).toFixed(0)}%` } },
+    xAxis: {
+      type: 'value',
+      max: 1,
+      axisLabel: { formatter: (v: number) => `${(v * 100).toFixed(0)}%`, color: t.axisText },
+      splitLine: { lineStyle: { color: t.splitLine } },
+    },
     yAxis: {
       type: 'category',
       data: rows.map((i) => i.company_name),
-      axisLabel: { width: 140, overflow: 'truncate' },
+      axisLabel: { width: 140, overflow: 'truncate', color: t.axisText },
     },
     series: [
       {

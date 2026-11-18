@@ -15,13 +15,24 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
-from config.settings import RISK_COLORS
+from config.settings import (
+    COLOR_ACCENT,
+    COLOR_DANGER,
+    COLOR_GRAY,
+    COLOR_OK,
+    COLOR_PRIMARY,
+    COLOR_VIOLET,
+    COLOR_WARN,
+    RISK_COLORS,
+)
 
-BLUE = "#1f77b4"
-RED = "#d62728"
-GREEN = "#2ca02c"
-ORANGE = "#ff9f1c"
-GRAY = "#90a4ae"
+BLUE = COLOR_PRIMARY
+RED = COLOR_DANGER
+GREEN = COLOR_OK
+ORANGE = COLOR_WARN
+GRAY = COLOR_GRAY
+ACCENT = COLOR_ACCENT
+VIOLET = COLOR_VIOLET
 
 _COMPONENT_DIR = Path(__file__).resolve().parents[1] / "components" / "echarts_local"
 _ECHARTS_JS = _COMPONENT_DIR / "echarts.min.js"

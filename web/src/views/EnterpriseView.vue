@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import type { EChartsOption } from 'echarts'
 
 import BaseChart from '../components/BaseChart.vue'
 import { api, type AnalyzeResp, type ExplainResp, type RulesVerdictResp, type ScoredRow } from '../api'
 import { fmtPercent, fmtNum, gradeColor, riskColor, ruleLevelColor, ruleLevelLabel } from '../lib/levels'
+import { C, chartTheme } from '../lib/theme'
 
 const route = useRoute()
+const router = useRouter()
 const code = computed(() => String(route.params.code || ''))
 const loading = ref(false)
 const error = ref('')
@@ -19,15 +21,21 @@ const analyzing = ref(false)
 
 const radarOption = computed<EChartsOption>(() => {
   const dims = Object.entries(rules.value?.dimensions ?? {})
+  const t = chartTheme()
   return {
-    tooltip: {},
+    backgroundColor: 'transparent',
+    tooltip: {
+      backgroundColor: t.tooltipBg,
+      borderColor: t.tooltipBorder,
+      textStyle: { color: t.tooltipText, fontSize: 11 },
+    },
     radar: {
       indicator: dims.map(([, v]) => ({ name: v.label, max: 100 })),
       radius: '62%',
-      axisName: { color: '#94a3b8', fontSize: 12 },
-      splitLine: { lineStyle: { color: '#24314f' } },
+      axisName: { color: t.radarAxis, fontSize: 12 },
+      splitLine: { lineStyle: { color: t.radarSplit } },
       splitArea: { areaStyle: { color: ['transparent'] } },
-      axisLine: { lineStyle: { color: '#24314f' } },
+      axisLine: { lineStyle: { color: t.radarSplit } },
     },
     series: [
       {
@@ -37,8 +45,8 @@ const radarOption = computed<EChartsOption>(() => {
             value: dims.map(([, v]) => v.score ?? 0),
             name: '规则六维评分',
             areaStyle: { color: 'rgba(37,99,235,0.25)' },
-            lineStyle: { color: '#2563eb', width: 2 },
-            itemStyle: { color: '#2563eb' },
+            lineStyle: { color: C.primary, width: 2 },
+            itemStyle: { color: C.primary },
           },
         ],
       },
@@ -48,14 +56,22 @@ const radarOption = computed<EChartsOption>(() => {
 
 const shapOption = computed<EChartsOption>(() => {
   const rows = [...(explain.value?.contributions ?? [])].reverse()
+  const t = chartTheme()
   return {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: t.tooltipBg,
+      borderColor: t.tooltipBorder,
+      textStyle: { color: t.tooltipText, fontSize: 11 },
+    },
     grid: { left: 8, right: 28, top: 8, bottom: 8, containLabel: true },
-    xAxis: { type: 'value', axisLabel: { color: '#94a3b8' } },
+    xAxis: { type: 'value', axisLabel: { color: t.axisText } },
     yAxis: {
       type: 'category',
       data: rows.map((r) => r.中文名),
-      axisLabel: { color: '#94a3b8', width: 130, overflow: 'truncate' },
+      axisLabel: { color: t.axisText, width: 130, overflow: 'truncate' },
     },
     series: [
       {
@@ -63,7 +79,7 @@ const shapOption = computed<EChartsOption>(() => {
         barWidth: 12,
         data: rows.map((r) => ({
           value: r.SHAP值,
-          itemStyle: { color: r.SHAP值 >= 0 ? '#dc2626' : '#16a34a' },
+          itemStyle: { color: r.SHAP值 >= 0 ? C.danger : C.ok },
         })),
       },
     ],
@@ -129,6 +145,7 @@ watch(code, load)
       </div>
       <button class="btn" :disabled="loading" @click="load">{{ loading ? '加载中…' : '刷新' }}</button>
       <button class="btn" :disabled="analyzing" @click="runAnalyze">{{ analyzing ? '研判中…' : '智能研判' }}</button>
+      <button class="btn" @click="router.push(`/finance/${code}`)">财务分析</button>
     </div>
 
     <p v-if="error" class="error-box">{{ error }}</p>
@@ -202,7 +219,7 @@ watch(code, load)
           智能研判
           <span
             class="chip"
-            :style="{ background: analyzeResp.verdict.cross_check_ok ? '#16a34a' : '#d97706' }"
+            :style="{ background: analyzeResp.verdict.cross_check_ok ? C.ok : C.warn }"
             style="margin-left: 8px"
           >
             {{ analyzeResp.verdict.cross_check_ok ? 'LLM 与规则一致' : '以规则为准' }}

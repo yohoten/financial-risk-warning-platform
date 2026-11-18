@@ -1,0 +1,33 @@
+- main [ref=e14]:
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: 风
+        - generic [ref=e19]:
+          - generic [ref=e20]: 财务风险智能预警平台
+          - generic [ref=e21]: Financial Risk Early-Warning Platform
+      - generic [ref=e22]:
+        - heading "让每一个风险评分 都可拆解、可审计、可追溯" [level=1] [ref=e23]: 让每一个风险评分都可拆解、可审计、可追溯
+        - paragraph [ref=e24]: XGBoost + TreeSHAP · 36 维入选特征 · 十大维度风险画像
+        - list [ref=e25]:
+          - listitem [ref=e26]: 四角色分权：管理员 / 分析师 / 审计员 / 查看者
+          - listitem [ref=e27]: 全链路留痕：登录、导出、处置操作均可回溯
+          - listitem [ref=e28]: 数据实时接入：定时拉取 + 外部推送 + 事件流
+      - generic [ref=e29]: v1.0 · Asia/Shanghai
+    - generic [ref=e31]:
+      - heading "账号登录" [level=2] [ref=e32]
+      - generic [ref=e33]:
+        - generic [ref=e34]: 用户名
+        - textbox "用户名" [active] [ref=e35]:
+          - /placeholder: 请输入用户名
+      - generic [ref=e36]:
+        - generic [ref=e37]: 密码
+        - generic [ref=e38]:
+          - textbox "密码 👁" [ref=e39]:
+            - /placeholder: 请输入密码
+          - button "👁" [ref=e40] [cursor=pointer]
+      - generic [ref=e41] [cursor=pointer]:
+        - checkbox "7 天内免登录" [ref=e42]
+        - generic [ref=e43]: 7 天内免登录
+      - button "登 录" [disabled] [ref=e44]
+      - paragraph [ref=e45]: 忘记密码请联系管理员重置。连续 5 次输错将锁定 15 分钟。

@@ -95,3 +95,80 @@ def health() -> dict:
         except api_client.BackendUnavailable as exc:
             return {"status": "api_unreachable", "detail": str(exc)}
     return {"status": "local", "detail": "本地直连领域层（未配置 RISK_API_URL）"}
+
+
+def _local_finance_overview() -> dict:
+    from api.services.finance import overview
+
+    return overview()
+
+
+def _local_finance_analysis(code: str, years: int = 5, peers: bool = True) -> dict:
+    from api.services.finance import analysis
+
+    return analysis(code, years, peers)
+
+
+def _local_risk_rules(code: str) -> dict:
+    from api.services.rules import rules_verdict
+
+    return rules_verdict(code)
+
+
+def finance_overview() -> dict:
+    if mode() == "api":
+        try:
+            return api_client.finance_overview()
+        except api_client.BackendUnavailable:
+            pass
+    return _local_finance_overview()
+
+
+def finance_analysis(code: str, years: int = 5, peers: bool = True) -> dict:
+    if mode() == "api":
+        try:
+            return api_client.finance_analysis(code, years, peers)
+        except api_client.BackendUnavailable:
+            pass
+    return _local_finance_analysis(code, years, peers)
+
+
+def risk_rules(code: str) -> dict:
+    if mode() == "api":
+        try:
+            return api_client.risk_rules(code)
+        except api_client.BackendUnavailable:
+            pass
+    return _local_risk_rules(code)
+
+
+def _local_refresh_enterprise(code: str) -> dict:
+    from api.services.datasources import refresh_enterprise
+
+    return refresh_enterprise(code)
+
+
+def _local_finance_report(code: str, years: int = 5) -> str:
+    from api.services.finance import report_markdown
+
+    return report_markdown(code, years)
+
+
+def refresh_enterprise(code: str) -> dict:
+    """刷新企业财务数据（接 /enterprise/{code}/refresh），API 优先、本地回退。"""
+    if mode() == "api":
+        try:
+            return api_client.refresh_enterprise(code)
+        except api_client.BackendUnavailable:
+            pass
+    return _local_refresh_enterprise(code)
+
+
+def finance_report_markdown(code: str, years: int = 5) -> str:
+    """金融分析 Markdown 报告原文，API 优先、本地回退。"""
+    if mode() == "api":
+        try:
+            return api_client.finance_report(code, years)
+        except api_client.BackendUnavailable:
+            pass
+    return _local_finance_report(code, years)

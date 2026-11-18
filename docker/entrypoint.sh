@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# 容器入口：数据/模型缺失时自动补齐，随后启动 Streamlit。
+# 容器入口：数据/模型缺失时自动补齐，随后执行传入命令（默认 Streamlit）。
+# api 服务传 uvicorn、worker 传 python -m api.worker、演示传 streamlit run ...
 set -euo pipefail
 
 MODEL_PATH="models/artifacts/xgboost_final.json"
@@ -17,8 +18,5 @@ if [ ! -f "$MODEL_PATH" ]; then
   python -m models.shap_analysis
 fi
 
-echo "[entrypoint] 启动 Streamlit ..."
-exec streamlit run streamlit_app/app.py \
-  --server.port=8501 \
-  --server.address=0.0.0.0 \
-  --server.headless=true
+echo "[entrypoint] 执行: $*"
+exec "$@"

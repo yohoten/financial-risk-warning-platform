@@ -13,6 +13,21 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
+# 运行时资源根目录：桌面端打包形态下，代码被冻结成 exe、数据资产放在同级
+# runtime/ 目录，通过 RISK_RUNTIME_DIR 指向；开发态为空，走项目目录。
+_RUNTIME_DIR = os.getenv("RISK_RUNTIME_DIR", "").strip()
+RUNTIME_DIR = Path(_RUNTIME_DIR) if _RUNTIME_DIR else None
+
+
+def rt(rel: str) -> Path:
+    """运行时资源路径：优先 runtime/ 目录，其次项目目录。"""
+    if RUNTIME_DIR is not None:
+        cand = RUNTIME_DIR / rel
+        if cand.exists():
+            return cand
+    return PROJECT_ROOT / rel
+
+
 DATA_DIR = PROJECT_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
 CLEANED_DIR = DATA_DIR / "cleaned"
@@ -32,7 +47,18 @@ ETL_DIR = PROJECT_ROOT / "etl"
 MODEL_DIR = PROJECT_ROOT / "models"
 ARTIFACT_DIR = MODEL_DIR / "artifacts"
 CACHE_DIR = PROJECT_ROOT / "cache"
-REPORT_DIR = PROJECT_ROOT / "reports"
+
+# 桌面端打包形态：可写数据目录（alerts.db、市值快照、报告输出）可被重定向到
+# 用户数据目录，避免往只读的安装目录里写。
+_DATA_DIR_ENV = os.getenv("RISK_DATA_DIR", "").strip()
+WRITABLE_DIR = Path(_DATA_DIR_ENV) if _DATA_DIR_ENV else PROJECT_ROOT
+CACHE_DIR = WRITABLE_DIR / "cache"
+REPORT_DIR = WRITABLE_DIR / "reports"
+
+# 桌面端打包形态：只读资产（模型产物、缓存快照）从 runtime/ 读取；
+# 可写资产（alerts.db、market_cap 快照、报告输出）仍落到用户可写目录。
+ARTIFACT_READ_DIR = rt("models/artifacts")
+CACHE_READ_DIR = rt("cache")
 DOCS_DIR = PROJECT_ROOT / "docs"
 DESIGN_DIR = DOCS_DIR / "desgin"
 NOTEBOOK_DIR = PROJECT_ROOT / "notebooks"
@@ -49,11 +75,11 @@ RAW_MARKET = RAW_DIR / "market_features_trd.csv"         # 市场交易特征（
 RAW_LABELS = RAW_DIR / "labels_st.csv"                   # ST 标签
 RAW_MACRO = EXTERNAL_DIR / "macro_industry.csv"          # 宏观与行业指标
 
-CLEANED_PANEL = CLEANED_DIR / "panel_clean.parquet"
-FEATURE_PANEL = FEATURE_STORE_DIR / "panel_features.parquet"
-FEATURE_MATRIX = FEATURE_STORE_DIR / "panel_model_input.parquet"
-FEATURE_LIST = FEATURE_STORE_DIR / "selected_features.json"
-FEATURE_REPORT = FEATURE_STORE_DIR / "feature_selection_report.csv"
+CLEANED_PANEL = rt("data/cleaned/panel_clean.parquet")
+FEATURE_PANEL = rt("data/feature_store/panel_features.parquet")
+FEATURE_MATRIX = rt("data/feature_store/panel_model_input.parquet")
+FEATURE_LIST = rt("data/feature_store/selected_features.json")
+FEATURE_REPORT = rt("data/feature_store/feature_selection_report.csv")
 
 # 覆盖标记：不进入特征筛选，但随面板/建模输入保留，供评估、监控和前端区分
 # “真实缺失”与“业务上的 0 值”。
@@ -64,15 +90,17 @@ AVAILABILITY_COLUMNS = [
     "market_available",
 ]
 
-MODEL_PATH = ARTIFACT_DIR / "xgboost_final.json"
-MODEL_ALL_PATH = ARTIFACT_DIR / "all_models.pkl"
-MODEL_META = ARTIFACT_DIR / "model_meta.json"
-METRICS_PATH = ARTIFACT_DIR / "metrics.json"
-EVAL_REPORT = ARTIFACT_DIR / "evaluation_report.md"
-SHAP_VALUES = CACHE_DIR / "shap_values.pkl"
-SHAP_EXPLAINER = CACHE_DIR / "shap_explainer.pkl"
-PREDICTION_PATH = CACHE_DIR / "predictions.parquet"
-MONITOR_REPORT = ARTIFACT_DIR / "monitor_report.json"
+MODEL_PATH = ARTIFACT_READ_DIR / "xgboost_final.json"
+MODEL_ALL_PATH = ARTIFACT_READ_DIR / "all_models.pkl"
+MODEL_META = ARTIFACT_READ_DIR / "model_meta.json"
+METRICS_PATH = ARTIFACT_READ_DIR / "metrics.json"
+EVAL_REPORT = ARTIFACT_READ_DIR / "evaluation_report.md"
+SHAP_VALUES = CACHE_READ_DIR / "shap_values.pkl"
+SHAP_EXPLAINER = CACHE_READ_DIR / "shap_explainer.pkl"
+PREDICTION_PATH = CACHE_READ_DIR / "predictions.parquet"
+# 总市值快照（AkShare 东财刷新时落盘，供 Altman Z 的 X4 使用）——可写目录
+MARKET_CAP_PATH = CACHE_DIR / "market_cap.parquet"
+MONITOR_REPORT = ARTIFACT_READ_DIR / "monitor_report.json"
 
 # ---------------------------------------------------------------------------
 # 实验参数
@@ -92,7 +120,7 @@ FORCE_FEATURES = ("audit_opinion",)
 
 # 概率校准：在验证集拟合，测试集只应用；默认等渗回归（小样本可用 Platt 回退）。
 CALIBRATION_METHOD = "isotonic"
-CALIBRATOR_PATH = ARTIFACT_DIR / "calibrator.pkl"
+CALIBRATOR_PATH = ARTIFACT_READ_DIR / "calibrator.pkl"
 
 # 成本敏感阈值：漏报一个 ST 的成本 / 误报一个正常企业的成本。
 # 10:1 是中期默认值，论文中应做 5:1、10:1、20:1 敏感性。
@@ -120,7 +148,17 @@ RISK_THRESHOLDS = {
 RISK_MEDIUM_RATIO = 0.5
 
 RISK_LEVELS = ["高风险", "中风险", "低风险"]
-RISK_COLORS = {"高风险": "#d62728", "中风险": "#ff9f1c", "低风险": "#2ca02c"}
+# 配色与前端 web/src/lib/theme.ts 的 C 常量保持一致（避免三端配色漂移）
+RISK_COLORS = {"高风险": "#dc2626", "中风险": "#ea580c", "低风险": "#16a34a"}
+
+# 全站语义色（对应前端 C 常量）
+COLOR_PRIMARY = "#2563eb"
+COLOR_ACCENT = "#06b6d4"
+COLOR_OK = "#16a34a"
+COLOR_WARN = "#d97706"
+COLOR_DANGER = "#dc2626"
+COLOR_GRAY = "#94a3b8"
+COLOR_VIOLET = "#7c3aed"
 
 IV_MIN = 0.02
 CORR_MAX = 0.85
@@ -174,6 +212,114 @@ LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 LLM_MODEL = os.getenv("LLM_MODEL", "")
 LLM_ANALYSIS_MAX_TOKENS = int(os.getenv("LLM_ANALYSIS_MAX_TOKENS", "4096"))
 LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "60"))
+
+# ---------------------------------------------------------------------------
+# LLM Agent / 上下文压缩 / 预热（移植自旧项目 server/app/core/config.py，
+# 供设置面板 DB 覆盖热生效；仅 Agent 对话与多模态路径使用，不影响研判降级）
+# ---------------------------------------------------------------------------
+LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "1024"))
+LLM_DISABLE_THINKING = os.getenv("LLM_DISABLE_THINKING", "0") == "1"
+LLM_MAX_TURNS = int(os.getenv("LLM_MAX_TURNS", "8"))
+LLM_SHORT_TERM_WINDOW = int(os.getenv("LLM_SHORT_TERM_WINDOW", "3"))
+
+AGENT_REQUIRE_APPROVAL = os.getenv("AGENT_REQUIRE_APPROVAL", "1") == "1"
+AGENT_APPROVAL_TIMEOUT = int(os.getenv("AGENT_APPROVAL_TIMEOUT", "300"))
+
+LLM_CONTEXT_WINDOW = int(os.getenv("LLM_CONTEXT_WINDOW", "128000"))
+COMPACTION_ENABLED = os.getenv("COMPACTION_ENABLED", "1") == "1"
+COMPACTION_THRESHOLD_RATIO = float(os.getenv("COMPACTION_THRESHOLD_RATIO", "0.8"))
+COMPACTION_RETAIN_RATIO = float(os.getenv("COMPACTION_RETAIN_RATIO", "0.16"))
+COMPACTION_SUMMARY_MAX_TOKENS = int(os.getenv("COMPACTION_SUMMARY_MAX_TOKENS", "1024"))
+
+PREHEAT_ENABLED = os.getenv("PREHEAT_ENABLED", "1") == "1"
+PREHEAT_ON_STARTUP = os.getenv("PREHEAT_ON_STARTUP", "1") == "1"
+PREHEAT_TTL_SECONDS = int(os.getenv("PREHEAT_TTL_SECONDS", "600"))
+
+
+# ---------------------------------------------------------------------------
+# 认证与权限（P1）
+# ---------------------------------------------------------------------------
+# RISK_AUTH_MODE:
+#   full  —— 强制登录（Web / 生产形态，默认）
+#   local —— 桌面端 / 单机演示：自动以 local-admin（全部权限）放行，不出登录页
+#   off   —— 仅供离线批处理脚本，视同 local 且不写审计
+AUTH_MODES = ("full", "local", "off")
+
+
+def auth_mode() -> str:
+    """当前认证模式（动态读取，便于测试与桌面端在运行期切换）。
+
+    默认值：源码运行 / Web 形态 = full（强制登录）；
+    被 PyInstaller 冻结（Electron 桌面端）时 = local（免登录，单机单用户）。
+    """
+    mode = os.getenv("RISK_AUTH_MODE", "").strip().lower()
+    if not mode:
+        import sys as _sys
+
+        mode = "local" if getattr(_sys, "frozen", False) else "full"
+    return mode if mode in AUTH_MODES else "full"
+
+
+def auth_enabled() -> bool:
+    """是否强制校验身份（local/off 模式下业务接口不校验）。"""
+    return auth_mode() == "full"
+
+
+def audit_enabled() -> bool:
+    """local/off 免登录形态下仍可关掉审计写入。"""
+    return auth_mode() != "off"
+
+
+ACCESS_TOKEN_MINUTES = int(os.getenv("RISK_ACCESS_TOKEN_MINUTES", "30"))
+ACCESS_TOKEN_EXPIRE_MINUTES = ACCESS_TOKEN_MINUTES  # 别名，与 ZNCBZS 命名对齐
+REFRESH_TOKEN_DAYS = int(os.getenv("RISK_REFRESH_TOKEN_DAYS", "7"))
+
+# 初始管理员：RISK_ADMIN_PASSWORD 未设置时用演示弱口令并强制改密（启动日志告警）。
+INITIAL_ADMIN_USERNAME = os.getenv("RISK_ADMIN_USERNAME", "admin").strip() or "admin"
+INITIAL_ADMIN_PASSWORD = os.getenv("RISK_ADMIN_PASSWORD", "").strip()
+INITIAL_ADMIN_EMAIL = os.getenv("RISK_ADMIN_EMAIL", "admin@example.com").strip()
+DEMO_ADMIN_PASSWORD = "admin12345"
+
+LOGIN_MAX_ATTEMPTS = int(os.getenv("RISK_LOGIN_MAX_ATTEMPTS", "5"))
+LOGIN_LOCK_MINUTES = int(os.getenv("RISK_LOGIN_LOCK_MINUTES", "15"))
+LOGIN_RATE_LIMIT = int(os.getenv("RISK_LOGIN_RATE_LIMIT", "10"))  # 每分钟/IP
+PASSWORD_MIN_LENGTH = int(os.getenv("RISK_PASSWORD_MIN_LENGTH", "8"))
+
+_auth_secret_cache: str | None = None
+
+
+def auth_secret() -> str:
+    """JWT 签名密钥：优先环境变量，其次持久化到可写目录（重启不失效）。
+
+    未配置时随机生成并落盘 cache/.auth_secret，绝不回退到硬编码常量。
+    """
+    global _auth_secret_cache
+    if _auth_secret_cache:
+        return _auth_secret_cache
+    env = os.getenv("RISK_AUTH_SECRET", "").strip() or os.getenv("JWT_SECRET_KEY", "").strip()
+    if env:
+        _auth_secret_cache = env
+        return env
+    import secrets as _secrets
+
+    path = CACHE_DIR / ".auth_secret"
+    try:
+        if path.is_file():
+            value = path.read_text(encoding="utf-8").strip()
+            if value:
+                _auth_secret_cache = value
+                return value
+        value = _secrets.token_urlsafe(48)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(value, encoding="utf-8")
+        try:  # 尽量收紧权限（POSIX；Windows 上静默忽略）
+            path.chmod(0o600)
+        except OSError:
+            pass
+    except OSError:
+        value = _secrets.token_urlsafe(48)
+    _auth_secret_cache = value
+    return value
 
 
 def ensure_dirs() -> None:

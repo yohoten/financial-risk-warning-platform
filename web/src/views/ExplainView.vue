@@ -5,6 +5,7 @@ import type { EChartsOption } from 'echarts'
 import BaseChart from '../components/BaseChart.vue'
 import { api, type DependenceRow, type ImportanceRow, type InteractionRow } from '../api'
 import { fmtNum } from '../lib/levels'
+import { C, chartTheme } from '../lib/theme'
 
 const loading = ref(false)
 const error = ref('')
@@ -15,42 +16,60 @@ const feature = ref('')
 
 const importanceOption = computed<EChartsOption>(() => {
   const rows = [...importance.value].reverse()
+  const t = chartTheme()
   return {
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: t.tooltipBg,
+      borderColor: t.tooltipBorder,
+      textStyle: { color: t.tooltipText, fontSize: 11 },
+    },
     grid: { left: 8, right: 28, top: 8, bottom: 8, containLabel: true },
-    xAxis: { type: 'value', axisLabel: { color: '#94a3b8' } },
+    xAxis: { type: 'value', axisLabel: { color: t.axisText } },
     yAxis: {
       type: 'category',
       data: rows.map((r) => r.中文名),
-      axisLabel: { color: '#94a3b8', width: 130, overflow: 'truncate' },
+      axisLabel: { color: t.axisText, width: 130, overflow: 'truncate' },
     },
     series: [
       {
         type: 'bar',
         barWidth: 10,
-        data: rows.map((r) => ({ value: r.importance, itemStyle: { color: '#2563eb' } })),
+        data: rows.map((r) => ({ value: r.importance, itemStyle: { color: C.primary } })),
       },
     ],
   }
 })
 
-const dependenceOption = computed<EChartsOption>(() => ({
-  tooltip: { trigger: 'item', formatter: (p: unknown) => {
-    const d = (p as { value?: [number, number] }).value
-    return d ? `取值 ${fmtNum(d[0], 4)}<br/>SHAP ${fmtNum(d[1], 4)}` : ''
-  } },
-  grid: { left: 12, right: 24, top: 12, bottom: 12, containLabel: true },
-  xAxis: { type: 'value', name: '特征取值', nameTextStyle: { color: '#94a3b8' }, axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#24314f' } } },
-  yAxis: { type: 'value', name: 'SHAP 值', nameTextStyle: { color: '#94a3b8' }, axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#24314f' } } },
-  series: [
-    {
-      type: 'scatter',
-      symbolSize: 5,
-      data: dependence.value.map((d) => [d.feature_value, d.shap_value]),
-      itemStyle: { color: 'rgba(6,182,212,0.55)' },
+const dependenceOption = computed<EChartsOption>(() => {
+  const t = chartTheme()
+  return {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: t.tooltipBg,
+      borderColor: t.tooltipBorder,
+      textStyle: { color: t.tooltipText, fontSize: 11 },
+      formatter: (p: unknown) => {
+        const d = (p as { value?: [number, number] }).value
+        return d ? `取值 ${fmtNum(d[0], 4)}<br/>SHAP ${fmtNum(d[1], 4)}` : ''
+      },
     },
-  ],
-}))
+    grid: { left: 12, right: 24, top: 12, bottom: 12, containLabel: true },
+    xAxis: { type: 'value', name: '特征取值', nameTextStyle: { color: t.axisText }, axisLabel: { color: t.axisText }, splitLine: { lineStyle: { color: t.splitLine } } },
+    yAxis: { type: 'value', name: 'SHAP 值', nameTextStyle: { color: t.axisText }, axisLabel: { color: t.axisText }, splitLine: { lineStyle: { color: t.splitLine } } },
+    series: [
+      {
+        type: 'scatter',
+        symbolSize: 5,
+        data: dependence.value.map((d) => [d.feature_value, d.shap_value]),
+        itemStyle: { color: 'rgba(6,182,212,0.55)' },
+      },
+    ],
+  }
+})
 
 async function loadBase() {
   loading.value = true

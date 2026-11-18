@@ -15,6 +15,19 @@ const API_PREFIXES = [
   '/risk',
   '/datasources',
   '/enterprise',
+  '/analyze',
+  '/chat',
+  '/settings',
+  '/skills',
+  '/plugins',
+  '/mcp',
+  '/share',
+  '/dashboard',
+  '/tables',
+  '/auth',
+  '/users',
+  '/audit',
+  '/attachments',
 ]
 
 // https://vite.dev/config/

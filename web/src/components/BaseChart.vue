@@ -11,6 +11,8 @@ import {
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 
+import { themeVersion } from '../lib/theme'
+
 // 按需注册：仅打包用到的图表与组件，显著减小体积（原全量引入 ~1.2MB）
 echarts.use([
   BarChart,
@@ -39,6 +41,17 @@ function resize() {
   chart?.resize()
 }
 
+/**
+ * 主题切换时重建实例：
+ * ECharts 初始化时会固化部分主题默认值（tooltip 背景、图例底色等），
+ * 仅 setOption 无法覆盖，必须 dispose 后重新 init 才能拿到新的 CSS 变量色。
+ */
+function rebuild() {
+  chart?.dispose()
+  chart = null
+  render()
+}
+
 onMounted(() => {
   render()
   window.addEventListener('resize', resize)
@@ -51,6 +64,8 @@ onBeforeUnmount(() => {
 })
 
 watch(() => props.option, render, { deep: true })
+// 主题切换 → option 重算 + 实例重建
+watch(themeVersion, rebuild)
 </script>
 
 <template>

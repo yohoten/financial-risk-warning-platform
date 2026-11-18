@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 import { api, type AlertRow, type AlertsSummaryResp } from '../api'
+import { hasPerm } from '../auth/store'
 import { fmtNum, fmtTime, ruleLevelColor, ruleLevelLabel } from '../lib/levels'
 
+const router = useRouter()
 const loading = ref(false)
 const error = ref('')
 const generating = ref(false)
@@ -16,6 +19,8 @@ const handler = ref('')
 const note = ref('')
 
 const selected = computed(() => items.value.find((i) => i.id === selectedId.value) ?? null)
+/** 只有具备 alert:handle 的角色（管理员/分析师）才看得到生成与处置入口 */
+const canHandle = computed(() => hasPerm('alert:handle'))
 
 const statusOptions = [
   { value: '', label: '全部状态' },
@@ -84,7 +89,7 @@ watch([statusFilter, levelFilter], load)
         <h2>预警中心</h2>
         <p class="page-sub">规则评分触发预警 → 人工处置 → 流水留痕（闭环）</p>
       </div>
-      <button class="btn primary" :disabled="generating" @click="generate">
+      <button v-if="canHandle" class="btn primary" :disabled="generating" @click="generate">
         {{ generating ? '生成中…' : '生成预警' }}
       </button>
     </div>
@@ -167,7 +172,10 @@ watch([statusFilter, levelFilter], load)
               :class="{ active: row.id === selectedId }"
               @click="selectedId = row.id"
             >
-              <td class="name">{{ row.company_name }}<span class="hint">（{{ row.stock_code }}）</span></td>
+              <td class="name">
+                <a class="link" @click.stop="router.push('/enterprise/' + row.stock_code)">{{ row.company_name }}</a>
+                <span class="hint">（{{ row.stock_code }}）</span>
+              </td>
               <td>
                 <span class="chip" :style="{ background: ruleLevelColor(row.level) }">{{ ruleLevelLabel(row.level) }}</span>
               </td>
@@ -204,6 +212,7 @@ watch([statusFilter, levelFilter], load)
         </ul>
         <p v-else class="hint">暂无证据记录</p>
 
+        <template v-if="canHandle">
         <h4 class="sec">处置</h4>
         <div class="toolbar">
           <input v-model="handler" class="toolbar-input" placeholder="处理人" style="width: 120px" />
@@ -215,6 +224,8 @@ watch([statusFilter, levelFilter], load)
           <button class="btn small" @click="handle('ignore')">忽略</button>
           <button class="btn small ghost" @click="handle('reopen')">重新打开</button>
         </div>
+
+        </template>
 
         <h4 class="sec">处置流水</h4>
         <ul v-if="selected.notes.length" class="ev-list">
@@ -242,6 +253,11 @@ watch([statusFilter, levelFilter], load)
 
 .list tr.active td {
   background: var(--hover);
+}
+
+.link {
+  color: var(--primary);
+  cursor: pointer;
 }
 
 .detail .meta {

@@ -1,3 +1,5 @@
+import { authFetch, extractError } from './auth/session'
+
 /** API 客户端：统一类型与错误处理。
  *
  * 新项目 FastAPI（api/main.py）的路由不含 /api 前缀，
@@ -416,9 +418,9 @@ export interface AlertsSummaryResp {
 // ---------------------------------------------------------------------------
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const resp = await fetch(url, init)
+  const resp = await authFetch(url, init)
   const data = await resp.json().catch(() => ({}))
-  if (!resp.ok) throw new Error((data as { detail?: string }).detail || `HTTP ${resp.status}`)
+  if (!resp.ok) throw extractError(data, resp.status)
   return data as T
 }
 
@@ -465,7 +467,8 @@ export const api = {
   financeOverview: () => request<FinanceOverviewResp>('/finance/overview'),
   financeAnalysis: (code: string, years = 5, peers = true) =>
     request<FinanceAnalysis>(`/finance/${code}/analysis?years=${years}&peers=${peers}`),
-  financeReportUrl: (code: string, years = 5) => `/finance/${code}/report?years=${years}`,
+  financeReportUrl: (code: string, years = 5, download = false) =>
+    `/finance/${code}/report?years=${years}${download ? '&download=1' : ''}`,
 
   // --- 预警闭环 ---
   alerts: (params: { status?: string; level?: string; stock_code?: string } = {}) => {
@@ -499,4 +502,163 @@ export const api = {
   refreshEnterprise: (code: string) =>
     request<RefreshResp>(`/enterprise/${code}/refresh`, { method: 'POST' }),
   analyze: (code: string) => request<AnalyzeResp>(`/analyze/${code}`, { method: 'POST' }),
+
+  // --- 平台扩展：企业档案 ---
+  enterprises: () => request<{ total: number; items: any[] }>('/enterprises'),
+  enterpriseGet: (code: string) => request<any>(`/enterprises/${code}`),
+  enterpriseAdd: (payload: { name: string; stock_code?: string; industry?: string; auto_refresh?: boolean }) =>
+    request<any>('/enterprises', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  enterpriseDelete: (code: string) => request<any>(`/enterprises/${code}`, { method: 'DELETE' }),
+  enterpriseProfile: (code: string) => request<any>(`/enterprises/${code}/profile`),
+
+  // --- 驾驶舱 ---
+  dashboardSummary: () => request<any>('/dashboard/summary'),
+  riskFacts: (params: { dimension?: string; stock_code?: string; limit?: number } = {}) => {
+    const q = new URLSearchParams()
+    if (params.dimension) q.set('dimension', params.dimension)
+    if (params.stock_code) q.set('stock_code', params.stock_code)
+    if (params.limit) q.set('limit', String(params.limit))
+    const qs = q.toString()
+    return request<any>(`/dashboard/risk-facts${qs ? `?${qs}` : ''}`)
+  },
+
+  // --- 对话（SSE + 会话管理） ---
+  chatStreamUrl: '/chat/stream',
+  chatApprove: (approvalId: string, approved: boolean) =>
+    request<any>('/chat/approve', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ approval_id: approvalId, approved }) }),
+  chatSessions: (q = '') => request<{ sessions: any[] }>(`/chat/sessions${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  chatSession: (id: string) => request<any>(`/chat/sessions/${id}`),
+  chatCreate: () => request<any>('/chat/sessions', { method: 'POST' }),
+  chatPatch: (id: string, payload: { title?: string; pinned?: boolean }) =>
+    request<any>(`/chat/sessions/${id}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  chatDelete: (id: string) => request<any>(`/chat/sessions/${id}`, { method: 'DELETE' }),
+  chatClear: (id: string) => request<any>(`/chat/sessions/${id}/clear`, { method: 'POST' }),
+  chatExportUrl: (id: string, format: 'md' | 'json') => `/chat/sessions/${id}/export?format=${format}`,
+  chatShare: (id: string) => request<any>(`/chat/sessions/${id}/share`, { method: 'POST' }),
+  chatRevokeShare: (id: string) => request<any>(`/chat/sessions/${id}/share`, { method: 'DELETE' }),
+  chatImport: (data: any) => request<any>('/chat/import', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ data }) }),
+  chatUsage: () => request<any>('/chat/usage'),
+
+  // --- 技能库 ---
+  skills: () => request<{ total: number; items: any[] }>('/skills'),
+  skillCreate: (payload: { name: string; description?: string; content: string }) =>
+    request<any>('/skills', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  skillUpdate: (id: number, payload: any) =>
+    request<any>(`/skills/${id}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  skillDelete: (id: number) => request<any>(`/skills/${id}`, { method: 'DELETE' }),
+
+  // --- 插件 / 预设 ---
+  pluginsTools: () => request<{ total: number; items: any[] }>('/plugins/tools'),
+  pluginCreateTool: (payload: any) => request<any>('/plugins/tools', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  pluginUpdateTool: (id: number, payload: any) =>
+    request<any>(`/plugins/tools/${id}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  pluginDeleteTool: (id: number) => request<any>(`/plugins/tools/${id}`, { method: 'DELETE' }),
+  presets: () => request<{ total: number; items: any[] }>('/plugins/presets'),
+  presetCreate: (payload: any) => request<any>('/plugins/presets', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  presetUpdate: (id: number, payload: any) =>
+    request<any>(`/plugins/presets/${id}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  presetDelete: (id: number) => request<any>(`/plugins/presets/${id}`, { method: 'DELETE' }),
+  presetExport: (id: number) => request<any>(`/plugins/presets/${id}/export`),
+  pluginsExportAll: () => request<any>('/plugins/export'),
+  pluginsImport: (data: any, strategy = 'rename') =>
+    request<any>('/plugins/import', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ data, strategy }) }),
+
+  // --- 设置 ---
+  settings: () => request<any>('/settings'),
+  settingsUpdate: (payload: Record<string, any>) =>
+    request<any>('/settings', { method: 'PUT', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  settingsReset: () => request<any>('/settings/reset', { method: 'POST' }),
+  settingsModels: (base_url: string, api_key?: string) =>
+    request<any>('/settings/models', { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ base_url, api_key }) }),
+
+  // --- MCP ---
+  mcpServers: () => request<{ total: number; items: any[] }>('/mcp/servers'),
+  mcpAddServer: (payload: any) => request<any>('/mcp/servers', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  mcpPatchServer: (id: number, payload: any) =>
+    request<any>(`/mcp/servers/${id}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  mcpDeleteServer: (id: number) => request<any>(`/mcp/servers/${id}`, { method: 'DELETE' }),
+  mcpTestServer: (id: number) => request<any>(`/mcp/servers/${id}/test`, { method: 'POST' }),
+  mcpSyncServer: (id: number) => request<any>(`/mcp/servers/${id}/sync`, { method: 'POST' }),
+
+  // --- 表格对象 ---
+  tables: (params: { stock_code?: string; status?: string } = {}) => {
+    const q = new URLSearchParams()
+    if (params.stock_code) q.set('stock_code', params.stock_code)
+    if (params.status) q.set('status', params.status)
+    const qs = q.toString()
+    return request<{ total: number; items: any[] }>(`/tables${qs ? `?${qs}` : ''}`)
+  },
+  tablesTemplates: () => request<any>('/tables/templates'),
+  tableCreate: (payload: any) => request<any>('/tables', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  tableGet: (id: number) => request<any>(`/tables/${id}`),
+  tableUpdate: (id: number, payload: any) =>
+    request<any>(`/tables/${id}`, { method: 'PATCH', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  tableWriteCells: (id: number, payload: any) =>
+    request<any>(`/tables/${id}/cells`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  tableValidate: (id: number) => request<any>(`/tables/${id}/validate`, { method: 'POST' }),
+  tablePreview: (id: number) => request<any>(`/tables/${id}/preview`),
+  tableIngest: (id: number, overwrite = false) =>
+    request<any>(`/tables/${id}/ingest`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ overwrite }) }),
+  tableConfirm: (id: number, cells: any[] = []) =>
+    request<any>(`/tables/${id}/confirm`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ cells }) }),
+  tableDelete: (id: number) => request<any>(`/tables/${id}`, { method: 'DELETE' }),
+  tableImport: (payload: any) => request<any>('/tables/import', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+
+  // --- 附件 / 多模态 ---
+  uploadAttachment: (payload: { filename: string; mime: string; data_base64: string; session_id?: string; origin?: string }) =>
+    request<any>('/attachments', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  attachmentUrl: (id: string) => `/attachments/${id}`,
+  attachments: (session_id = '') => request<{ total: number; items: any[] }>(`/attachments?session_id=${encodeURIComponent(session_id)}`),
+  attachmentMeta: (id: string) => request<any>(`/attachments/${id}/meta`),
+  attachmentDelete: (id: string) => request<any>(`/attachments/${id}`, { method: 'DELETE' }),
+  attachmentRead: (id: string, payload: { target?: string; table_id?: number; dry_run?: boolean } = {}) =>
+    request<any>(`/attachments/${id}/read`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+
+  // --- 数据接入中心 ---
+  datasourceConfig: () => request<{ total: number; items: any[] }>('/datasources/config'),
+  datasourceConfigUpsert: (payload: any) =>
+    request<any>('/datasources/config', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  datasourceConfigDelete: (id: number) => request<any>(`/datasources/config/${id}`, { method: 'DELETE' }),
+  datasourcePull: (payload: any = {}) =>
+    request<any>('/datasources/pull', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+
+  ingestLogs: (params: { page?: number; size?: number; dimension?: string; status?: string; channel?: string } = {}) => {
+    const q = new URLSearchParams()
+    if (params.page) q.set('page', String(params.page))
+    if (params.size) q.set('size', String(params.size))
+    if (params.dimension) q.set('dimension', params.dimension)
+    if (params.status) q.set('status', params.status)
+    if (params.channel) q.set('channel', params.channel)
+    const qs = q.toString()
+    return request<{ total: number; page: number; size: number; items: any[] }>(`/ingest/logs${qs ? `?${qs}` : ''}`)
+  },
+  ingestStaging: (params: { dimension?: string; quality_pass?: number; consumed?: number; limit?: number } = {}) => {
+    const q = new URLSearchParams()
+    if (params.dimension) q.set('dimension', params.dimension)
+    if (params.quality_pass !== undefined) q.set('quality_pass', String(params.quality_pass))
+    if (params.consumed !== undefined) q.set('consumed', String(params.consumed))
+    if (params.limit) q.set('limit', String(params.limit))
+    const qs = q.toString()
+    return request<{ total: number; items: any[] }>(`/ingest/staging${qs ? `?${qs}` : ''}`)
+  },
+  ingestConsume: (payload: any = {}) =>
+    request<any>('/ingest/staging/consume', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+
+  ingestKeys: () => request<{ total: number; items: any[] }>('/ingest/keys'),
+  ingestKeyCreate: (payload: { name: string; scopes: string[]; expires_at?: string }) =>
+    request<any>('/ingest/keys', { method: 'POST', headers: jsonHeaders, body: JSON.stringify(payload) }),
+  ingestKeyRevoke: (id: number) => request<any>(`/ingest/keys/${id}`, { method: 'DELETE' }),
+
+  ingestPush: async (dimension: string, batchId: string, items: any[], apiKey: string) => {
+    const resp = await fetch(`/ingest/v1/${dimension}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+      body: JSON.stringify({ batch_id: batchId, items }),
+    })
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok) throw extractError(data, resp.status)
+    return data
+  },
 }
+
+const jsonHeaders = { 'Content-Type': 'application/json' }

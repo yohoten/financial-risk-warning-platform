@@ -13,13 +13,23 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from config.feature_registry import FEATURE_MAP, FEATURE_GROUP_LABELS, RADAR_DIMENSIONS, by_group
-from config.settings import RISK_COLORS
+from config.settings import (
+    COLOR_ACCENT,
+    COLOR_DANGER,
+    COLOR_GRAY,
+    COLOR_OK,
+    COLOR_PRIMARY,
+    COLOR_WARN,
+    RISK_COLORS,
+)
 
 PLOT_TEMPLATE = "plotly_white"
-BLUE = "#1f77b4"
-RED = "#d62728"
-GREEN = "#2ca02c"
-ORANGE = "#ff7f0e"
+BLUE = COLOR_PRIMARY
+RED = COLOR_DANGER
+GREEN = COLOR_OK
+ORANGE = COLOR_WARN
+ACCENT = COLOR_ACCENT
+GRAY = COLOR_GRAY
 
 
 def _thresholds() -> dict:

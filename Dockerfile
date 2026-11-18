@@ -19,6 +19,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Vue SPA 静态托管：api 服务读取 web/dist（构建产物不入库时自动跳过）
+# 构建前端：cd web && npm install && npm run build
+RUN if [ -d web/dist ]; then echo "web/dist present"; else echo "web/dist missing -> API will run headless only"; fi
+
 # 首次启动若缺少数据/模型，自动完成"生成演示数据 → 训练 → 评估 → SHAP"全流程
 RUN chmod +x docker/entrypoint.sh
 

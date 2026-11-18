@@ -83,7 +83,7 @@ def _panel() -> pd.DataFrame:
     if "year" in df.columns:
         df["year"] = df["year"].astype(int)
     # 合并留存收益补充表（盈余公积 + 未分配利润），补齐 Altman X2（G-13）
-    ext_path = settings.RAW_DIR / "candidates" / "balance_sheet_ext.csv"
+    ext_path = settings.rt("data/raw/candidates/balance_sheet_ext.csv")
     if ext_path.exists():
         try:
             ext = pd.read_csv(ext_path, dtype={"stock_code": str}, encoding="utf-8-sig")
@@ -695,8 +695,17 @@ def analysis(stock_code: str, years: int = 5, with_peers: bool = True) -> dict:
     median = _peer_median(peer)
     cur = _latest(periods)
 
-    # 市值口径的 Altman Z 需要公开行情（阶段 4 数据源接入），当前 Z'' 用账面净资产
+    # Altman Z 的 X4 需要股权市值（亿元口径）：
+    # 取 AkShare 刷新时落盘的总市值快照（东财单位为元，这里统一换算为亿元）。
     market_cap = None
+    try:
+        from api.services.datasources import market_cap as _cap
+
+        raw = _cap(code)
+        if raw is not None and raw > 0:
+            market_cap = raw / 1e8
+    except Exception:  # noqa: BLE001 —— 市值缺失不应阻断分析
+        market_cap = None
 
     models = {
         "altman": build_altman(cur, market_cap),
@@ -709,7 +718,7 @@ def analysis(stock_code: str, years: int = 5, with_peers: bool = True) -> dict:
     if len(periods) < 2:
         notes.append("仅有一期财报，同比与 F/M 模型不可用")
     if market_cap is None:
-        notes.append("未取到总市值（数据源接入在阶段 4 实现），Altman Z 使用 Z'' 账面净资产口径")
+        notes.append("未取到总市值，点击「🔄 刷新」可从东财拉取市值快照，Altman Z 即可计算；当前以 Z'' 账面净资产口径呈现")
     if not peer or len(peer["rows"]) < 2:
         notes.append("同行业可比企业不足，同业对标样本有限")
 
@@ -735,24 +744,50 @@ def analysis(stock_code: str, years: int = 5, with_peers: bool = True) -> dict:
 
 
 def overview(years: int = 5) -> dict:
-    panel = _panel()
+    """全库财务概览（供企业选择器与横向筛选）。
+
+    实现说明：这里对每家企业调用 ``load_periods`` 会产生 N 次全表扫描
+    （全库 4,000+ 家时约 60 秒，首屏不可接受）。
+    改为一次性向量化 groupby：按 code 排序后取每家最近 ``years`` 期，
+    再用 shift 计算同比，用 transform 取最新期字段。
+    """
+    panel = _panel().sort_values(["stock_code", "year"])
+    # 每家最近 years 期
+    win = panel.groupby("stock_code", sort=True).tail(years).copy()
+    # 同比：与上一期比较（窗口内 shift）
+    win["_prev_revenue"] = win.groupby("stock_code")["revenue"].shift(1)
+    win["_prev_np"] = win.groupby("stock_code")["net_profit_parent"].shift(1)
+    win["_prev_np"] = win["_prev_np"].fillna(win.groupby("stock_code")["net_profit"].shift(1))
+    win["_revenue_growth"] = (win["revenue"] - win["_prev_revenue"]) / win["_prev_revenue"].abs() * 100
+    # 最新期 = 窗口内最后一行
+    latest = win.groupby("stock_code", sort=True).tail(1).copy()
+    # 期数统计
+    counts = win.groupby("stock_code")["year"].count()
+
+    # 派生指标（与 _period_from_row 口径一致）
+    latest["_net_profit"] = latest["net_profit_parent"].fillna(latest["net_profit"])
+    latest["_gross_margin"] = (latest["revenue"] - latest["cost"]) / latest["revenue"] * 100
+    latest["_net_margin"] = latest["_net_profit"] / latest["revenue"] * 100
+    latest["_roe"] = latest["_net_profit"] / latest["equity"] * 100
+    latest["_debt_ratio"] = latest["total_liabilities"] / latest["total_assets"] * 100
+
     items: list[dict] = []
-    for code in sorted(panel["stock_code"].drop_duplicates().tolist()):
-        periods = load_periods(code, years)
-        cur = _latest(periods)
-        name = panel[panel["stock_code"] == code]["company_name"].iloc[-1]
-        industry = panel[panel["stock_code"] == code]["industry"].iloc[-1]
+    for rec in latest.to_dict("records"):
+        code = str(rec["stock_code"])
         items.append({
-            "stock_code": code, "name": name, "industry": _industry_label(industry),
-            "has_finance": cur is not None, "years": len(periods),
-            "latest_year": cur["year"] if cur else None,
-            "revenue": _r(_f(cur.get("revenue")) if cur else None, 2),
-            "net_profit": _r(_f(cur.get("net_profit")) if cur else None, 2),
-            "revenue_growth": _r(_f(cur.get("revenue_growth")) if cur else None, 2),
-            "gross_margin": _r(_f(cur.get("gross_margin")) if cur else None, 2),
-            "net_margin": _r(_f(cur.get("net_margin")) if cur else None, 2),
-            "roe": _r(_f(cur.get("roe")) if cur else None, 2),
-            "debt_ratio": _r(_f(cur.get("debt_ratio")) if cur else None, 2),
+            "stock_code": code,
+            "name": rec.get("company_name"),
+            "industry": _industry_label(rec.get("industry")),
+            "has_finance": True,
+            "years": int(counts.get(code, 0)),
+            "latest_year": int(rec["year"]),
+            "revenue": _r(_f(rec.get("revenue")), 2),
+            "net_profit": _r(_f(rec.get("_net_profit")), 2),
+            "revenue_growth": _r(_f(rec.get("_revenue_growth")), 2),
+            "gross_margin": _r(_f(rec.get("_gross_margin")), 2),
+            "net_margin": _r(_f(rec.get("_net_margin")), 2),
+            "roe": _r(_f(rec.get("_roe")), 2),
+            "debt_ratio": _r(_f(rec.get("_debt_ratio")), 2),
         })
     return {"total": len(items), "items": items}
 

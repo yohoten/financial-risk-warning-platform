@@ -3,7 +3,7 @@
 
 PY ?= python
 
-.PHONY: help install data sync sync-write readiness depreciation debt-fix annual-market pipeline validate train evaluate shap monitor app test lint docker clean
+.PHONY: help install data sync sync-write readiness depreciation debt-fix annual-market pipeline validate train evaluate shap monitor app api web-build desktop-backend desktop-dist test lint docker clean
 
 help:  ## 显示所有可用命令
 	@grep -E "^[a-zA-Z_-]+:.*?## .*$$" $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -51,7 +51,19 @@ monitor:  ## PSI 漂移监控
 	$(PY) -m models.monitor
 
 app:  ## 启动 Streamlit 平台
-	$(PY) -m streamlit run streamlit_app/app.py
+	$(PY) -m streamlit run streamlit_app/streamlit_app.py
+
+api:  ## 启动 FastAPI 服务层（Vue 大屏后端）
+	$(PY) -m uvicorn api.main:app --host 127.0.0.1 --port 8000
+
+web-build:  ## 构建 Vue 前端（web/dist）
+	cd web && npm install && npm run build
+
+desktop-backend:  ## 用 PyInstaller 打包后端（desktop/resources/backend）
+	$(PY) scripts/build_backend.py
+
+desktop-dist: web-build desktop-backend  ## 打包 Windows 桌面端（nsis + portable）
+	cd desktop && npm install && npm run dist
 
 all: data pipeline train evaluate shap  ## 空目录全链路演示（已有真实数据请只跑 make pipeline）
 

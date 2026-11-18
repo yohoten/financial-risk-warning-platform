@@ -7,7 +7,7 @@
 [![Streamlit](https://img.shields.io/badge/streamlit-1.29-FF4B4B.svg)](https://streamlit.io/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-2.0-green.svg)](https://xgboost.readthedocs.io/)
 [![SHAP](https://img.shields.io/badge/SHAP-0.45-orange.svg)](https://shap.readthedocs.io/)
-[![Tests](https://img.shields.io/badge/tests-76%20passed-brightgreen.svg)](./tests)
+[![Tests](https://img.shields.io/badge/tests-115%20passed-brightgreen.svg)](./tests)
 
 ---
 
@@ -36,13 +36,41 @@
 | 📋 **批量预警** | 粘贴代码 / 上传 CSV、阈值实时调节、风险等级分布、Excel/CSV 一键导出 |
 | 🔍 **模型解释** | 全局重要性（特征 + 维度双视角）、依赖效应、交互强度、五模型对比、校准曲线、PSI 漂移监控 |
 | 📄 **报告导出** | 单企业 PDF 诊断报告（内置中文字体，无外部依赖）、批量 Excel（含汇总 Sheet）、评估报告、数据字典 |
-| ⚙️ **工程能力** | 一键 Docker 部署、76 项单元测试、四步特征筛选证据链、概率校准与成本阈值、模型元信息与运行清单留痕（数据/特征 hash、参数、阈值） |
-| 🔌 **FastAPI 服务层** | 评分/解释/监控 + 财务分析/规则评分/预警闭环 HTTP 接口（`api/`），前端可 API 优先、失败回退本地 |
-| 🖥️ **Vue 3 前端** | 数据看板/企业列表/企业诊断/预警中心/模型解释/财务分析/报告导出 七视图 SPA（Vite + TypeScript + ECharts） |
+| ⚙️ **工程能力** | 一键 Docker 部署、115 项单元测试、四步特征筛选证据链、概率校准与成本阈值、模型元信息与运行清单留痕（数据/特征 hash、参数、阈值） |
+| 🔐 **认证与权限** | JWT 双令牌（access 30min + refresh 7d 轮换）+ 四角色分权（管理员/分析师/审计员/查看者）+ 15 权限点矩阵 + 登录锁定/防枚举 + 审计日志 |
+| 🔌 **FastAPI 服务层** | 评分/解释/监控 + 财务分析/规则评分/预警闭环 HTTP 接口（`api/`），前端可 API 优先、失败回退本地；全部路由经集中式鉴权闸门 |
+| 📡 **数据实时接入** | 三通道：scheduler 定时拉取 + `/ingest/v1` X-API-Key 机器推送（幂等 + 质量闸门）+ SSE 事件流；接入→重打分→预警闭环 |
+| 🖥️ **Vue 3 前端** | 九视图 SPA（Vite + TypeScript + ECharts）：数据看板/企业列表/企业诊断/预警中心/模型解释/财务分析/报告导出/数据接入中心/用户与角色，含登录页与路由守卫 |
 
 ---
 
 ## 🚀 快速开始
+
+### 0. 本地开发联调：后端 + 前端（日常开发推荐）
+
+需要两个终端。**终端 1 启动后端**（Windows PowerShell）：
+
+```powershell
+cd D:\CodingEmber\financial-risk-warning-platform
+.\.venv\Scripts\Activate.ps1                       # 激活虚拟环境（PowerShell 用 .ps1）
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+> 关键点：**必须用 `python -m uvicorn`，不要裸敲 `uvicorn`**。`uvicorn.exe` 装在 `.venv\Scripts\`，未激活时不在 PATH，会报「术语 'uvicorn' 不会被识别」。若 `Activate.ps1` 被执行策略拦截，直接跳过激活：`.\.venv\Scripts\python.exe -m uvicorn api.main:app --port 8000 --reload`。
+
+**终端 2 启动前端**：
+
+```powershell
+cd D:\CodingEmber\financial-risk-warning-platform\web
+npm install
+npm run dev                                        # → http://localhost:5173
+```
+
+浏览器打开 **http://localhost:5173**，用初始管理员 **`admin` / `admin12345`** 登录（可用环境变量 `RISK_ADMIN_PASSWORD` 覆盖口令）。前端 `/auth`、`/predict` 等请求由 Vite 代理到 `127.0.0.1:8000`。
+
+> 若前端报 `ECONNREFUSED 127.0.0.1:8000`，说明后端没起来（端口未监听），先完成终端 1 再刷新页面。
+
+---
 
 ### 方式一：演示模式（3 分钟跑通全链路，无需任何数据权限）
 
@@ -70,7 +98,7 @@ streamlit run streamlit_app/streamlit_app.py
 ```bash
 make all      # data → pipeline → train → evaluate → shap（仅空目录演示）
 make app      # 启动平台
-make test     # 76 项单元测试
+make test     # 115 项单元测试
 ```
 
 > 已有真实数据时 **不要** 跑 `make all`：`data.gen_demo_data` 会检测到 `data/raw/csmar_financial.csv` 并拒绝覆盖（确需覆盖加 `--force`，会先备份到 `data/demo_raw/backup_*`）。真实数据链路用 `make pipeline` 起。
@@ -151,12 +179,23 @@ docker load < risk_platform_v1.0.tar && docker compose up -d
 Streamlit 默认本地直连领域层；需要服务化时启动 FastAPI 后端：
 
 ```bash
-uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+# ⚠️ 用「python -m uvicorn」，不要裸敲 uvicorn（uvicorn.exe 在 .venv 里，未激活时不在 PATH）
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 # 或 docker compose up -d api
 curl http://localhost:8000/health
 curl -X POST http://localhost:8000/predict/codes -H "Content-Type: application/json" \
      -d '{"codes":["000004"],"year":2023}'
 ```
+
+> **Windows 用户**：先激活虚拟环境再启动，PowerShell 用 `Activate.ps1`（不是 `Activate.bat`，那是 cmd 用）：
+> ```powershell
+> .\.venv\Scripts\Activate.ps1
+> python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+> ```
+> 若 `Activate.ps1` 被执行策略拦截，可直接用 venv 内的解释器，无需激活：
+> ```powershell
+> .\.venv\Scripts\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+> ```
 
 - 契约：`docs/FastAPI服务层设计.md`；三层架构与图表方案：`docs/前端架构与图表方案.md`；功能/预测/UI 设计：`docs/平台功能与预测设计.md`。
 - 前端切远程：设置 `RISK_API_URL=http://localhost:8000`（`utils/backend.py` 自动 API 优先、失败回退本地）。
@@ -168,8 +207,8 @@ curl -X POST http://localhost:8000/predict/codes -H "Content-Type: application/j
 项目内置一个 Vue 3 单页应用（`web/`），开发期由 Vite 按前缀代理到 FastAPI：
 
 ```bash
-# 1) 启动后端
-uvicorn api.main:app --port 8000
+# 1) 启动后端（务必用 python -m uvicorn，详见方式四）
+python -m uvicorn api.main:app --port 8000
 
 # 2) 安装依赖并启动前端（开发模式 → http://localhost:5173）
 cd web && npm install && npm run dev
@@ -178,9 +217,32 @@ cd web && npm install && npm run dev
 npm run build
 ```
 
-- 七个视图：数据看板 / 企业列表 / 企业诊断 / 预警中心 / 模型解释 / 财务分析 / 报告导出（路由见 `web/src/router.ts`）。
+- 首次启动后端会自动创建初始管理员 **`admin` / `admin12345`**（可用环境变量 `RISK_ADMIN_PASSWORD` 覆盖，登录后请立即修改）；前端登录后按角色进入各自可访问的首页。
+- 九大视图：数据看板 / 企业列表 / 企业诊断 / 预警中心 / 模型解释 / 财务分析 / 报告导出 / 数据接入中心 / 用户与角色（路由见 `web/src/router.ts`，顶栏菜单按登录用户的权限点过滤）。
 - 财务分析含杜邦分析、Altman Z/Z2、Piotroski、Beneish 与同业对标（对应 `api/services/finance.py`）。
+- 全站配色统一由 `web/src/lib/theme.ts` 的 `C` 常量提供（primary `#2563eb` / ok `#16a34a` / warn `#d97706` / danger `#dc2626`），ECharts 坐标轴/图例/雷达分割线随浅色·深色主题自动切换。
 - 根目录 `index.html` 为项目落地页（导航入口），"进入平台"指向 `web/dist/index.html`。
+
+### 方式六：桌面端（Electron 多平台打包）
+
+三种交付形态共用同一套 `/finance/*` 契约与同一领域层，桌面端只是把「后端 + SPA」打成一个安装包：
+
+```bash
+# 1) 构建前端
+cd web && npm install && npm run build
+
+# 2) 打包后端（PyInstaller 冻结成独立 exe，自带 runtime 数据资产）
+pip install pyinstaller
+python scripts/build_backend.py
+
+# 3) 打包 Windows 安装包（nsis + portable）
+cd desktop && npm install && npm run dist
+# 产物：desktop/release/FinancialRiskWarningPlatform-1.0.0-x64-Setup.exe
+```
+
+- 后端启动优先级：`RWP_BACKEND` 环境变量 → 打包产物 `resources/backend/risk-backend[.exe]` → 项目 `.venv` → 系统 `python`。
+- 打包形态下只读资产（面板数据、模型产物、评分缓存）从 `resources/backend/runtime/` 读取；可写资产（`alerts.db`、市值快照、报告）落在 Electron 的 `userData/data/` 目录。
+- 自检：`cd desktop && npm run smoke`（仅拉起后端 + 健康检查）。
 
 ---
 
@@ -268,7 +330,7 @@ flowchart LR
 | 超参优化 | Optuna（TPE + MedianPruner） | 贝叶斯搜索，替代网格/随机搜索 |
 | 可解释性 | SHAP（TreeExplainer） | 四维度归因分析 |
 | 前端（Streamlit） | Streamlit + Plotly（+ ECharts 本地化选配） | 五大模块快速原型，全中文图表、离线可用 |
-| 前端（Vue SPA） | Vue 3 + Vite + TypeScript + vue-router + ECharts | 七视图生产化前端（`web/`） |
+| 前端（Vue SPA） | Vue 3 + Vite + TypeScript + vue-router + ECharts | 九视图生产化前端（`web/`） |
 | 服务层 | FastAPI + Pydantic + httpx | 评分/解释/监控 + 财务/规则/预警闭环 HTTP 接口 |
 | 报告 | ReportLab（内置 CID 中文字体）、openpyxl、pandoc + python-docx | PDF/Excel 导出 + 论文 Word 生成 |
 | 工程 | pytest、ruff、Docker Compose、Makefile | 测试、规范、部署、一键复现 |
@@ -318,7 +380,7 @@ financial-risk-warning-platform/
 │   └── artifacts/                #   模型权重、指标、对比表、runs/<run_id>/ 快照
 ├── streamlit_app/                # 🖥️ 前端
 │   ├── streamlit_app.py          #   首页（状态自检 + 模块导航）
-│   ├── pages/                    #   1_数据看板 / 2_企业诊断 / 3_批量预警 / 4_模型解释 / 5_报告导出
+│   ├── pages/                    #   1_数据看板 / 2_企业诊断 / 3_批量预警 / 4_模型解释 / 5_报告导出 / 6_金融分析
 │   ├── components/layout.py      #   KPI 行、页头、下载按钮
 │   ├── components/echarts_local/ #   ECharts 本地组件（离线渲染，无 CDN）
 │   └── utils/                    #   data（缓存取数）/ charts（Plotly）/ backend（API·本地回退）
@@ -328,9 +390,18 @@ financial-risk-warning-platform/
 │   ├── package.json              #   vue / vue-router / echarts + vite 工具链
 │   ├── vite.config.ts            #   开发代理（/health /predict /finance /alerts ... → :8000）
 │   ├── src/api.ts                #   API 客户端 + TypeScript 类型契约
-│   ├── src/router.ts             #   七视图路由
-│   ├── src/views/                #   Dashboard / Enterprises / Enterprise / Alerts / Explain / Finance / Report
+│   ├── src/router.ts             #   九视图路由 + 登录页 + 路由守卫（按权限）
+│   ├── src/lib/theme.ts          #   全站配色常量 C + 主题 token（浅/深色自适应）
+│   ├── src/lib/levels.ts         #   风险等级 / 评级配色（取自 theme.ts 的 C）
+│   ├── src/views/                #   Dashboard / Enterprises / Enterprise / Alerts / Explain / Finance / Report / DataSource / Users / Login / Forbidden
 │   └── dist/                     #   构建产物（可直接静态托管）
+├── desktop/                      # 🖥️ 桌面端（Electron + 内嵌 FastAPI）
+│   ├── main.js                   #   主进程：动态端口 / 拉起后端 / 健康检查 / 托盘 / 菜单
+│   ├── preload.js                #   预加载（contextIsolation）
+│   ├── scripts/build-web.js      #   构建 Vue 并拷贝到 resources/web
+│   ├── scripts/build-backend.js  #   PyInstaller 打包后端到 resources/backend
+│   ├── resources/                #   web（前端产物）/ backend（后端 exe + runtime 数据）
+│   └── release/                  #   安装包产物（nsis / portable）
 ├── index.html                    # 🌐 项目落地页（导航到 web/dist 与文档）
 ├── data/                         # 🗄️ 数据（详见 data/README.md）
 │   ├── gen_demo_data.py          #   演示数据生成器（潜在风险因子驱动）
@@ -364,7 +435,7 @@ financial-risk-warning-platform/
 ├── scripts/thesis_md2docx.lua     # 📄 pandoc 过滤器：mermaid→占位、去排版说明
 ├── scripts/postprocess_docx.py    # 📄 论文 Word 后处理：A4/宋体黑体/三线表/目录标题
 ├── scripts/add_front_matter.py    # 📄 封面 + 原创性声明 + 中英文摘要
-├── tests/                        # ✅ 76 项测试（含 API/前端）
+├── tests/                        # ✅ 115 项测试（含 API/认证/权限/接入/前端）
 │   ├── conftest.py               #   内存面板夹具（不写盘、不依赖模型）
 │   ├── test_feature_registry.py  #   特征口径一致性
 │   ├── test_feature_engineering.py
@@ -507,7 +578,7 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | 6. 解释 | `python -m models.shap_analysis`（`--check` 校验缓存版本） | `shap_values.pkl`、`cache/shap_meta.json` |
 | 7. 监控 | `python -m models.monitor` | `monitor_report.json`、`psi_detail.csv` |
 | 8. 平台 | `streamlit run streamlit_app/streamlit_app.py` | 五大模块可交互 |
-| 9. 测试 | `python -m pytest -q` | 76 passed |
+| 9. 测试 | `python -m pytest -q` | 115 passed |
 | 10. 论文 | `pandoc docs/Attachment/论文_第1-4章.md docs/Attachment/论文_系统设计与实现.md docs/Attachment/论文_参考文献.md --lua-filter scripts/thesis_md2docx.lua --toc --standalone -o docs/Attachment/论文_全文.docx` → `python scripts/postprocess_docx.py docs/Attachment/论文_全文.docx` → `python scripts/add_front_matter.py docs/Attachment/论文_全文.docx` | `论文_全文.docx`（封面/声明/摘要/目录/正文/参考文献） |
 
 ---
@@ -582,8 +653,10 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | SHAP 可解释性 | ✅ | 四维度分析 + 缓存 + Plotly 可视化 |
 | Streamlit 平台 | ✅ | 五大模块 + 报告导出 |
 | FastAPI 服务层 | ✅ | 评分/解释/监控 + 财务/规则/预警闭环接口 |
+| 认证·权限·审计 | ✅ | JWT 双令牌 + 四角色 RBAC + 审计日志 + 登录页/路由守卫 |
+| 数据实时接入 | ✅ | 定时拉取 + API Key 推送 + SSE 事件流 + 接入后重打分闭环 |
 | 论文文档 | ✅ | 第 1–5 章正文稿 + 参考文献 + Word 版（`docs/Attachment/论文_全文.docx`） |
-| 工程化 | ✅ | 76 项测试、Docker、Makefile、文档自动生成 |
+| 工程化 | ✅ | 115 项测试、Docker、Makefile、文档自动生成 |
 | 待办 | ⬜ | 2024 锁箱（等 2026 官方标签）、扣非净利润官方口径核验（FI_Indicators）、2025 MD&A 文本、在线增量更新、模型注册表（MLflow） |
 
 ---

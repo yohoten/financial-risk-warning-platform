@@ -1,46 +1,51 @@
+# 财务风险智能预警平台 · 生产化编排
+# nginx(TLS 终止) + api(uvicorn) + worker(pull 定时拉取) + redis(令牌黑名单/事件，预留 pubsub)
+#
+# 说明：
+#  1) 业务库当前为 SQLite（共享卷 ./cache/platform.db + ./cache/alerts.db），
+#     PostgreSQL 双形态由 SQLAlchemy 迁移后启用（见下方 postgres 注释块）。
+#  2) api 单 worker（进程内 SSE 事件总线）；水平扩容需把事件总线换 Redis pub/sub。
+#  3) 首启缺数据/模型时，entrypoint 自动生成演示数据并训练（见 docker/entrypoint.sh）。
+
 services:
-  risk-warning-platform:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: risk-warning-platform:1.0
-    container_name: risk-warning-platform
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: risk-nginx
     ports:
-      - "8501:8501"
+      - "80:80"
+      # - "443:443"
     volumes:
-      - ./data:/app/data
-      - ./models/artifacts:/app/models/artifacts
-      - ./cache:/app/cache
-      - ./reports:/app/reports
-    environment:
-      - TZ=Asia/Shanghai
-      - LOG_LEVEL=INFO
-      - DEMO_MODE=1
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8501/_stcore/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 90s
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
     image: risk-warning-platform:1.0
-    container_name: risk-warning-api
+    container_name: risk-api
+    entrypoint: ["/app/docker/entrypoint.sh"]
     command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
-    ports:
-      - "8000:8000"
     volumes:
       - ./data:/app/data
       - ./models/artifacts:/app/models/artifacts
       - ./cache:/app/cache
       - ./reports:/app/reports
+      - ./web/dist:/app/web/dist
     environment:
       - TZ=Asia/Shanghai
-      - LOG_LEVEL=INFO
+      - RISK_WEB_DIST=/app/web/dist
+      - RISK_AUTH_MODE=${RISK_AUTH_MODE:-full}
+      - RISK_AUTH_SECRET=${RISK_AUTH_SECRET:-}
+      - RISK_ADMIN_PASSWORD=${RISK_ADMIN_PASSWORD:-}
+      - RISK_ADMIN_USERNAME=${RISK_ADMIN_USERNAME:-admin}
+      - RISK_CORS_ORIGINS=${RISK_CORS_ORIGINS:-*}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      - redis
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
@@ -48,3 +53,70 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: risk-warning-platform:1.0
+    container_name: risk-worker
+    entrypoint: ["/app/docker/entrypoint.sh"]
+    command: ["python", "-m", "api.worker"]
+    volumes:
+      - ./data:/app/data
+      - ./models/artifacts:/app/models/artifacts
+      - ./cache:/app/cache
+      - ./reports:/app/reports
+    environment:
+      - TZ=Asia/Shanghai
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: risk-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # 演示端 Streamlit（生产默认不启；docker compose --profile demo up 启用）
+  # streamlit:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   image: risk-warning-platform:1.0
+  #   container_name: risk-streamlit
+  #   entrypoint: ["/app/docker/entrypoint.sh"]
+  #   command: ["streamlit", "run", "streamlit_app/streamlit_app.py",
+  #             "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true"]
+  #   ports:
+  #     - "8501:8501"
+  #   volumes:
+  #     - ./data:/app/data
+  #     - ./models/artifacts:/app/models/artifacts
+  #     - ./cache:/app/cache
+  #     - ./reports:/app/reports
+  #   environment:
+  #     - TZ=Asia/Shanghai
+  #     - DEMO_PASSWORD=${DEMO_PASSWORD:-}
+  #   profiles: ["demo"]
+  #   restart: unless-stopped
+
+  # 业务库 PostgreSQL（SQLAlchemy 迁移后启用；当前业务库为 SQLite 共享卷）
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: risk-postgres
+  #   environment:
+  #     - POSTGRES_USER=risk
+  #     - POSTGRES_PASSWORD=risk
+  #     - POSTGRES_DB=risk
+  #   volumes:
+  #     - pg_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+volumes:
+  redis_data:
+  # pg_data:

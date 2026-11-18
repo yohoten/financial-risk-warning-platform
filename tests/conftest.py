@@ -8,7 +8,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import os
+
 import numpy as np
+
+# 既有测试不关心登录：默认走 local 免登录形态（认证专项测试自行切回 full）。
+os.environ.setdefault("RISK_AUTH_MODE", "local")
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
