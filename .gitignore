@@ -1,19 +1,28 @@
 # ============================================================
 # 金融风险预警平台 .gitignore
-# 原则：数据、产物、缓存、日志不入库；源码、文档、表结构说明、测试入库。
-# 校验：git status 只应出现源码/文档变更；git ls-files -i -c --exclude-standard 应为空。
+# 原则：数据、构建产物、缓存、日志、运行时依赖不入库；
+#       源码、文档、表结构说明、测试、配置模板入库。
+# 校验：git status 只应出现源码/文档变更；
+#       git ls-files -i -c --exclude-standard 应为空。
+# 注意：.gitignore 只对「未跟踪」文件生效；已被 git 跟踪的产物
+#       需先 git rm --cached，或对历史用 git filter-repo 彻底剥离。
 # ============================================================
 
 # ---- Python ----
 __pycache__/
 *.py[cod]
+*$py.class
 *.egg-info/
+*.egg
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
 .ipynb_checkpoints/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
+.python-version
 
 # ---- 虚拟环境 ----
 .venv/
@@ -21,6 +30,53 @@ venv/
 env/
 .workbuddy/
 .codebuddy/
+
+# ---- Node / 前端（Vue · Vite）----
+node_modules/
+dist/
+web/dist/
+web/.playwright-cli/
+.npm/
+*.tsbuildinfo
+vite.config.*.timestamp-*
+
+# ---- 桌面端（Electron）----
+desktop/node_modules/
+desktop/dist/
+desktop/release/
+desktop/resources/backend/
+desktop/resources/web/
+desktop/out/
+
+# ---- PyInstaller / 打包 ----
+build/
+dist/
+*.spec
+*.manifest
+
+# ---- Playwright / 浏览器自动化 ----
+browser/
+.playwright-cli/
+playwright-report/
+test-results/
+
+# ---- 数据库 / 序列化对象（均为运行时生成，可重建）----
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.pkl
+*.pickle
+*.parquet
+*.feather
+
+# ---- 运行时上传与工具临时文件 ----
+attachments/
+exec-approvals.json
+ps-exe.txt
+cachedir/
 
 # ---- 落地区：CSMAR 原始包（只读、体积大）----
 DATA_RAW_Download/
@@ -76,7 +132,10 @@ Thumbs.db
 
 # ---- 本地配置与密钥 ----
 .env
-.env.local
+.env.*
+!.env.example
+!.env.production.example
+.streamlit/secrets.toml
 cookies.txt
 
 # ---- 编辑器 ----
