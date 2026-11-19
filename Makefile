@@ -79,5 +79,8 @@ lint:  ## 代码风格检查
 docker:  ## 构建并启动容器
 	docker compose up -d --build
 
-clean:  ## 清理缓存产物（不删除原始数据）
-	rm -rf cache/* reports/* models/artifacts/* data/cleaned/* data/feature_store/*
+clean:  ## 清理冗余产物（构建/缓存/备份，不删除原始数据与模型权重）
+	$(PY) -m scripts.clean_project --write
+
+clean-dry:  ## 预演清理（仅列出将删除项，不真正删除）
+	$(PY) -m scripts.clean_project
