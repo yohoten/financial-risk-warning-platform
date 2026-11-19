@@ -1,21 +1,54 @@
+<div align="center">
+
 # 🏦 上市公司财务风险智能预警平台
+
+### Financial Risk Intelligent Early-Warning Platform for Listed Companies
 
 > 基于 **XGBoost + SHAP** 的上市公司财务风险预警系统：融合 **80 维候选 / 36 维入选**的多源异构特征，提供从数据采集、特征工程、模型训练到交互式解释与报告导出的一站式解决方案。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/streamlit-1.29-FF4B4B.svg)](https://streamlit.io/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-API-009688.svg)](https://fastapi.tiangolo.com/)
+[![Vue 3](https://img.shields.io/badge/Vue-3-4FC08D.svg)](https://vuejs.org/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-2.0-green.svg)](https://xgboost.readthedocs.io/)
 [![SHAP](https://img.shields.io/badge/SHAP-0.45-orange.svg)](https://shap.readthedocs.io/)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED.svg)](https://www.docker.com/)
 [![Tests](https://img.shields.io/badge/tests-115%20passed-brightgreen.svg)](./tests)
 
+</div>
+
 ---
+
+<a id="toc"></a>
+
+## 📑 目录
+
+| 板块 | 章节 |
+|:---:|:---|
+| 🏁 **概览** | [项目简介](#intro) · [功能特性](#features) |
+| 🚀 **上手** | [快速开始](#quickstart) · [系统架构](#architecture) |
+| 🔧 **工程** | [技术栈](#stack) · [项目结构](#tree) · [复现清单](#reproduce) |
+| 📊 **数据与模型** | [数据说明](#data) · [模型与评估](#model) · [可解释性](#shap) |
+| 📚 **附录** | [文档索引](#docs) · [常见问题](#faq) · [开发计划](#roadmap) · [参考文献](#references) · [声明与许可](#disclaimer) |
+
+---
+
+<a id="intro"></a>
 
 ## 📌 项目简介
 
 传统 Z-score、Logistic 回归在非线性关系捕捉与多维信息融合上存在局限，深度学习等"黑箱"模型又难以满足金融监管对可解释性的刚性要求。本项目以**沪深 A 股制造业上市公司**为研究对象，构建覆盖**偿债、盈利、营运、成长、现金流、文本情感、公司治理、审计市场司法、宏观行业、数字化转型**十大维度的特征体系（80 维候选、四步筛选后 36 维入选），以 **XGBoost** 为主模型，通过 **TreeSHAP** 实现四维度可解释性分析，并提供**双前端**落地：**Streamlit**（快速原型、离线可用）与 **Vue 3 + FastAPI**（生产化前后端，`web/` + `api/`）。
 
 **核心主张**：在保证预测精度（OOT AUC ≥ 0.85、KS ≥ 0.40）的同时，让每一个风险评分都可被拆解、审计与追溯。
+
+### 核心指标速览
+
+| 🎯 测试集 AUC | 📈 KS | 🔎 Recall@Top10 | 🧬 特征维度 | ✅ 就绪体检 |
+|:---:|:---:|:---:|:---:|:---:|
+| **0.8962** | **0.6609** | **66.93%** | 80 → **36** | PASS 26 / WARN 1 / BLOCK 0 |
+
+> 以上为当前真实数据产物 `run_id=20261114-213525-da08d92c`（50 trials）的 2023 留出测试结果；训练现在即可复现，详见 [模型与评估](#model)。
 
 **三个关键工程决策**：
 
@@ -26,6 +59,8 @@
 | 防口径漂移 | 特征元数据集中在 `config/feature_registry.py` | ETL、模型、前端、文档同源，避免"代码一套、论文一套" |
 
 ---
+
+<a id="features"></a>
 
 ## ✨ 功能特性
 
@@ -44,7 +79,23 @@
 
 ---
 
+<a id="quickstart"></a>
+
 ## 🚀 快速开始
+
+> **先选路径**：7 种启动方式覆盖从"看效果"到"生产交付"的全部场景。不确定从哪开始时，按下面的速查表对号入座。
+
+| 你的目标 | 推荐方式 | 前置条件 | 访问地址 |
+|:---|:---|:---|:---|
+| 日常改代码、前后端联调 | [0 · 本地联调](#start-dev) | Python + Node | `localhost:5173` |
+| 3 分钟跑通全链路、只看效果 | [方式一 · 演示模式](#start-demo) | 仅 Python | `localhost:8501` |
+| 接入 CSMAR 真实数据 | [方式二 · 真实数据](#start-real) | CSMAR 数据权限 | `localhost:8501` |
+| 答辩演示 / 一键交付 | [方式三 · Docker](#start-docker) | Docker | `localhost:8501` |
+| 服务化、供多端复用 | [方式四 · FastAPI](#start-api) | Python | `localhost:8000` |
+| 生产化前端 SPA | [方式五 · Vue 3](#start-vue) | Python + Node | `localhost:5173` |
+| 打包成桌面安装包 | [方式六 · Electron](#start-desktop) | Python + Node | 本地 `.exe` |
+
+<a id="start-dev"></a>
 
 ### 0. 本地开发联调：后端 + 前端（日常开发推荐）
 
@@ -71,6 +122,8 @@ npm run dev                                        # → http://localhost:5173
 > 若前端报 `ECONNREFUSED 127.0.0.1:8000`，说明后端没起来（端口未监听），先完成终端 1 再刷新页面。
 
 ---
+
+<a id="start-demo"></a>
 
 ### 方式一：演示模式（3 分钟跑通全链路，无需任何数据权限）
 
@@ -102,6 +155,8 @@ make test     # 115 项单元测试
 ```
 
 > 已有真实数据时 **不要** 跑 `make all`：`data.gen_demo_data` 会检测到 `data/raw/csmar_financial.csv` 并拒绝覆盖（确需覆盖加 `--force`，会先备份到 `data/demo_raw/backup_*`）。真实数据链路用 `make pipeline` 起。
+
+<a id="start-real"></a>
 
 ### 方式二：接入真实数据（CSMAR 原始包）
 
@@ -142,7 +197,8 @@ python -m etl.mapping --source D:\csmar\export --dry-run
 python -m etl.mapping --source D:\csmar\export --write
 ```
 
-**当前真实数据状态（2026-11-15，已通过就绪体检：PASS 26 / WARN 1 / BLOCK 0，唯一 WARN 为 2024 锁箱待 2026 标签）**
+> ### ✅ 当前真实数据状态 · 2026-11-15
+> 已通过训练就绪体检：**PASS 26 / WARN 1 / BLOCK 0**，唯一 WARN 为 2024 锁箱待 2026 标签。
 
 | 项 | 数值 |
 |---|---|
@@ -163,6 +219,8 @@ python -m etl.mapping --source D:\csmar\export --write
 > 缺口明细、补齐命令与验收标准见 [`docs/数据缺口与补齐清单_20261114.md`](./docs/数据缺口与补齐清单_20261114.md)；
 > 目录、清洗规则与质量门见 [`docs/数据治理与目录规范.md`](./docs/数据治理与目录规范.md)。
 
+<a id="start-docker"></a>
+
 ### 方式三：Docker 部署（答辩/交付推荐）
 
 ```bash
@@ -173,6 +231,8 @@ docker compose up -d --build          # 首次启动会自动补齐数据与模�
 docker save risk-warning-platform:1.0 -o risk_platform_v1.0.tar
 docker load < risk_platform_v1.0.tar && docker compose up -d
 ```
+
+<a id="start-api"></a>
 
 ### 方式四：FastAPI 服务（可选，供多端复用）
 
@@ -202,6 +262,8 @@ curl -X POST http://localhost:8000/predict/codes -H "Content-Type: application/j
 - 图表：默认 Plotly；把 `echarts.min.js` 放入 `streamlit_app/components/echarts_local/` 后，数据看板可切换 ECharts（离线本地渲染，不依赖 CDN）。
 - 服务层除核心接口外，还含 `/finance/*`（财务分析）、`/risk/rules/*`（规则六维评分）、`/alerts*`（预警闭环）等阶段 1 移植接口，实现在 `api/services/`（`finance.py` / `rules.py` / `alerts.py`）。
 
+<a id="start-vue"></a>
+
 ### 方式五：Vue 3 前端（现代化 SPA，需 Node）
 
 项目内置一个 Vue 3 单页应用（`web/`），开发期由 Vite 按前缀代理到 FastAPI：
@@ -222,6 +284,8 @@ npm run build
 - 财务分析含杜邦分析、Altman Z/Z2、Piotroski、Beneish 与同业对标（对应 `api/services/finance.py`）。
 - 全站配色统一由 `web/src/lib/theme.ts` 的 `C` 常量提供（primary `#2563eb` / ok `#16a34a` / warn `#d97706` / danger `#dc2626`），ECharts 坐标轴/图例/雷达分割线随浅色·深色主题自动切换。
 - 根目录 `index.html` 为项目落地页（导航入口），"进入平台"指向 `web/dist/index.html`。
+
+<a id="start-desktop"></a>
 
 ### 方式六：桌面端（Electron 多平台打包）
 
@@ -245,6 +309,8 @@ cd desktop && npm install && npm run dist
 - 自检：`cd desktop && npm run smoke`（仅拉起后端 + 健康检查）。
 
 ---
+
+<a id="architecture"></a>
 
 ## 🏗️ 系统架构
 
@@ -319,6 +385,8 @@ flowchart LR
 
 ---
 
+<a id="stack"></a>
+
 ## 🛠️ 技术栈
 
 | 类别 | 组件 | 用途 |
@@ -336,6 +404,8 @@ flowchart LR
 | 工程 | pytest、ruff、Docker Compose、Makefile | 测试、规范、部署、一键复现 |
 
 ---
+
+<a id="tree"></a>
 
 ## 📁 项目结构
 
@@ -453,6 +523,8 @@ financial-risk-warning-platform/
 
 ---
 
+<a id="data"></a>
+
 ## 📊 数据说明
 
 ### 数据来源
@@ -502,6 +574,8 @@ financial-risk-warning-platform/
 
 ---
 
+<a id="model"></a>
+
 ## 🤖 模型与评估
 
 ### 五模型定位
@@ -525,8 +599,15 @@ financial-risk-warning-platform/
 | KS | ≥ 0.40 | ≥ 0.50 | 辅助排序指标 |
 | Brier | ≤ 0.15 | ≤ 0.10 | 概率校准质量 |
 
-> **真实数据（官方 ST 标签）**：主模型 XGBoost(tuned)，当前产物 `run_id=20261114-213525-da08d92c`（50 trials）
-> 验证 2022 AUC 0.9196 / PR-AUC 0.4116 / ECE 0.0032；测试 2023 AUC 0.8962 / PR-AUC 0.3986 / KS 0.6609 / Recall@Top10 66.93% / ECE 0.0126。
+> ### 🏆 真实数据评估结果（官方 ST 标签）
+> 主模型 XGBoost(tuned)，当前产物 `run_id=20261114-213525-da08d92c`（50 trials）
+>
+> | 数据集 | AUC | PR-AUC | KS | Recall@Top10 | ECE |
+> |:---:|:---:|:---:|:---:|:---:|:---:|
+> | 验证 2022 | 0.9196 | 0.4116 | — | — | 0.0032 |
+> | **测试 2023** | **0.8962** | **0.3986** | **0.6609** | **66.93%** | **0.0126** |
+>
+> 三项主指标（PR-AUC / Recall@Top10 / ECE）均达**优秀线**；辅助指标 KS 达优秀线、AUC 达合格线。
 > 作为对照，默认预算（30 trials，`run_id=20261114-211237-da08d92c`）验证 PR-AUC 0.3981、测试 PR-AUC **0.4268**。
 > 两者说明：**验证集只有 75 个正样本，继续加 trials 提升的是验证集排序而非泛化**；默认预算保持 30，报告时固定一次结果。
 >
@@ -542,6 +623,8 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 ```
 
 ---
+
+<a id="shap"></a>
 
 ## 💡 可解释性（TreeSHAP 四维度）
 
@@ -565,6 +648,8 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 
 ---
 
+<a id="reproduce"></a>
+
 ## 🧪 复现清单
 
 | 步骤 | 命令 | 预期产物 |
@@ -582,6 +667,8 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | 10. 论文 | `pandoc docs/Attachment/论文_第1-4章.md docs/Attachment/论文_系统设计与实现.md docs/Attachment/论文_参考文献.md --lua-filter scripts/thesis_md2docx.lua --toc --standalone -o docs/Attachment/论文_全文.docx` → `python scripts/postprocess_docx.py docs/Attachment/论文_全文.docx` → `python scripts/add_front_matter.py docs/Attachment/论文_全文.docx` | `论文_全文.docx`（封面/声明/摘要/目录/正文/参考文献） |
 
 ---
+
+<a id="docs"></a>
 
 ## 📚 文档索引
 
@@ -614,6 +701,8 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 
 ---
 
+<a id="faq"></a>
+
 ## ❓ 常见问题
 
 **Q：没有 CSMAR 权限能跑通吗？**
@@ -642,6 +731,8 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 
 ---
 
+<a id="roadmap"></a>
+
 ## 🗓️ 开发计划
 
 | 阶段 | 状态 | 内容 |
@@ -661,6 +752,8 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 
 ---
 
+<a id="references"></a>
+
 ## 📖 参考文献
 
 1. Altman, E. I. (1968). Financial Ratios, Discriminant Analysis and the Prediction of Corporate Bankruptcy. *The Journal of Finance*, 23(4), 589–609.
@@ -677,6 +770,8 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 完整文献清单（含中文文献、技术博客、开源项目、数据平台）见 [`docs/文献与资料调研清单.md`](./docs/文献与资料调研清单.md)。
 
 ---
+
+<a id="disclaimer"></a>
 
 ## 🙏 声明
 
