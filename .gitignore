@@ -82,6 +82,7 @@ cachedir/
 # ---- 落地区：CSMAR 原始包（只读、体积大）----
 DATA_RAW_Download/
 CSMAR_download/
+docs/附件
 
 # ---- 暂存区：规范化中间表与批次归档 ----
 data/incoming/csmar/*.csv
