@@ -104,8 +104,8 @@ python -m scripts.check_data_readiness
 python -m etl.run_pipeline
 ```
 
-当前进度与缺口见 [`docs/数据缺口与补齐清单_20261114.md`](../docs/数据缺口与补齐清单_20261114.md)，
-目录与清洗规则见 [`docs/数据治理与目录规范.md`](../docs/数据治理与目录规范.md)。
+当前进度与缺口见 [`docs/数据缺口与补齐清单_20261114.md`](../docs/analysis/数据缺口与补齐清单_20261114.md)，
+目录与清洗规则见 [`docs/数据治理与目录规范.md`](../docs/design/数据治理与目录规范.md)。
 
 ## 三层数据契约
 

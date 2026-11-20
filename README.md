@@ -72,10 +72,14 @@
 | 🔍 **模型解释** | 全局重要性（特征 + 维度双视角）、依赖效应、交互强度、五模型对比、校准曲线、PSI 漂移监控 |
 | 📄 **报告导出** | 单企业 PDF 诊断报告（内置中文字体，无外部依赖）、批量 Excel（含汇总 Sheet）、评估报告、数据字典 |
 | ⚙️ **工程能力** | 一键 Docker 部署、115 项单元测试、四步特征筛选证据链、概率校准与成本阈值、模型元信息与运行清单留痕（数据/特征 hash、参数、阈值） |
-| 🔐 **认证与权限** | JWT 双令牌（access 30min + refresh 7d 轮换）+ 四角色分权（管理员/分析师/审计员/查看者）+ 15 权限点矩阵 + 登录锁定/防枚举 + 审计日志 |
-| 🔌 **FastAPI 服务层** | 评分/解释/监控 + 财务分析/规则评分/预警闭环 HTTP 接口（`api/`），前端可 API 优先、失败回退本地；全部路由经集中式鉴权闸门 |
+| 🔐 **认证与权限** | JWT 双令牌（access 30min + refresh 7d 轮换）+ 四角色分权（管理员/分析师/审计员/查看者）+ **17 权限点**矩阵 + 集中式路由鉴权闸门 + 登录锁定/防枚举 + 审计日志 + 查看者导出水印 |
+| 🔌 **FastAPI 服务层** | 100+ 端点（12 个路由包）：评分/解释/监控 + 财务分析/规则评分/预警闭环 + 企业/看板/审计 + 数据接入 + 平台扩展；前端可 API 优先、失败回退本地（**注**：`/predict/frame` what-if 反向模拟当前返回 501 尚未实现） |
 | 📡 **数据实时接入** | 三通道：scheduler 定时拉取 + `/ingest/v1` X-API-Key 机器推送（幂等 + 质量闸门）+ SSE 事件流；接入→重打分→预警闭环 |
-| 🖥️ **Vue 3 前端** | 九视图 SPA（Vite + TypeScript + ECharts）：数据看板/企业列表/企业诊断/预警中心/模型解释/财务分析/报告导出/数据接入中心/用户与角色，含登录页与路由守卫 |
+| 🤖 **LLM 智能研判** | 工具调用型 Agent（`api/agent/`）：5 步上限、19 个内置工具、工具结果 6000 字符截断、写操作人工审批；配 16 个会话管理端点与多模态附件视觉识别（`/attachments/{id}/read`） |
+| 🔌 **MCP 接入** | 双向：作为客户端接入外部 MCP 服务并同步工具清单（`mcp_<tool>`）；同时通过 `POST /mcp` 把本平台评分/解释能力对外暴露为 MCP 工具 |
+| 🧩 **插件与技能** | 插件工具 CRUD + 预设（工具白名单 + 方法论）组合 + 导入导出；技能（Skill）可被 Agent 动态发现与加载 |
+| 🗂️ **工作台与协作** | 智能工作台（会话 / 表格 / 附件 / 插件 / 技能统一入口）、表格在线编辑与入库、只读分享链接与有效期控制、会话导出 md/json |
+| 🖥️ **Vue 3 前端** | **12 视图 SPA**（Vite + TypeScript + ECharts）：数据看板 / 企业列表 / 企业诊断 / 预警中心 / 模型解释 / 财务分析 / 报告导出 / **智能工作台** / 数据接入中心 / 用户与角色 / 登录页 / 403 页，含按权限点过滤的路由守卫 |
 
 ---
 
@@ -216,8 +220,8 @@ python -m etl.mapping --source D:\csmar\export --write
 > 落地区（`DATA_RAW_Download/`）还有 3 张已核对、尚未入库的官方表：`FI_T1` 偿债能力（586,759 行，`F011501A` 带息债务比覆盖 100%）、`FS_Comscfi` 间接法（327,535 行，折旧 `D000103000` 覆盖 99.84%）、`TRD_Year` 年个股回报率（60,366 行）；它们可直接关闭"折旧/长期负债"两项口径缺口，命令 `python -m scripts.sync_raw_download --only FI_T1,FS_Comscfi,TRD_Year --write`。
 >
 > 仍待补：2026 官方标签（解锁 2024 锁箱）、扣非净利润官方表（FI_Indicators）、2025 年 MD&A 文本。
-> 缺口明细、补齐命令与验收标准见 [`docs/数据缺口与补齐清单_20261114.md`](./docs/数据缺口与补齐清单_20261114.md)；
-> 目录、清洗规则与质量门见 [`docs/数据治理与目录规范.md`](./docs/数据治理与目录规范.md)。
+> 缺口明细、补齐命令与验收标准见 [`docs/数据缺口与补齐清单_20261114.md`](./docs/analysis/数据缺口与补齐清单_20261114.md)；
+> 目录、清洗规则与质量门见 [`docs/数据治理与目录规范.md`](./docs/design/数据治理与目录规范.md)。
 
 <a id="start-docker"></a>
 
@@ -398,7 +402,7 @@ flowchart LR
 | 超参优化 | Optuna（TPE + MedianPruner） | 贝叶斯搜索，替代网格/随机搜索 |
 | 可解释性 | SHAP（TreeExplainer） | 四维度归因分析 |
 | 前端（Streamlit） | Streamlit + Plotly（+ ECharts 本地化选配） | 五大模块快速原型，全中文图表、离线可用 |
-| 前端（Vue SPA） | Vue 3 + Vite + TypeScript + vue-router + ECharts | 九视图生产化前端（`web/`） |
+| 前端（Vue SPA） | Vue 3 + Vite + TypeScript + vue-router + ECharts | 12 视图生产化前端（`web/`） |
 | 服务层 | FastAPI + Pydantic + httpx | 评分/解释/监控 + 财务/规则/预警闭环 HTTP 接口 |
 | 报告 | ReportLab（内置 CID 中文字体）、openpyxl、pandoc + python-docx | PDF/Excel 导出 + 论文 Word 生成 |
 | 工程 | pytest、ruff、Docker Compose、Makefile | 测试、规范、部署、一键复现 |
@@ -412,14 +416,26 @@ flowchart LR
 ```
 financial-risk-warning-platform/
 ├── DATA_RAW_Download/            # 📦 下载落地区（只读、不入库）：CSMAR 原始包原样存放
-├── api/                          # 🔌 FastAPI 服务层：评分/解释/监控 + 财务/规则/预警接口
-│   ├── main.py                   #   FastAPI 入口 + 路由
+├── api/                          # 🔌 FastAPI 服务层（100+ 端点，12 个路由包）
+│   ├── main.py                   #   FastAPI 入口 + 核心路由 + 中间件编排 + SPA 静态托管
 │   ├── schemas.py                #   Pydantic 请求模型
-│   └── services/                 #   领域层薄封装
-│       ├── __init__.py           #   核心评分/解释/监控（models/* → JSON）
-│       ├── finance.py            #   财务分析（阶段 1 移植）
-│       ├── rules.py              #   规则六维评分（阶段 1 移植）
-│       └── alerts.py             #   预警闭环（SQLite 持久化）
+│   ├── middleware.py             #   安全头 / 访问日志 / 登录闸门
+│   ├── rate_limit.py             #   限流
+│   ├── audit.py                  #   审计日志
+│   ├── routers/                  #   路由包（12）：enterprises/finance/alerts/explain/dashboard/
+│   │                             #   attachments/audit/chat/datasources/mcp/plugins/settings/
+│   │                             #   share/skills/tables
+│   ├── services/                 #   领域层薄封装（16）：核心评分/解释/监控 + 财务/规则/预警 +
+│   │                             #   LLM/插件/技能/表格/附件/数据源
+│   ├── auth/                     #   认证与授权（10）：JWT 双令牌 / RBAC 17 权限点 / 守卫 / 撤销
+│   ├── agent/                    #   LLM Agent（8）：循环 / 工具注册 / 提示词 / 上下文 /
+│   │                             #   会话 / 事件 / 审批
+│   ├── llm/                      #   LLM 客户端封装与预热
+│   ├── mcp/                      #   MCP 客户端与服务（工具同步、对外暴露）
+│   ├── ingest/                   #   数据接入（事件 / 质量闸门 / 安全）
+│   ├── worker/                   #   后台任务与调度
+│   ├── db/                       #   数据库建表与种子数据
+│   └── datasources/              #   数据源配置
 ├── config/                       # ⚙️ 全局配置（唯一事实来源）
 │   ├── settings.py               #   路径（含落地区/暂存区）、样本窗口、阈值、随机种子
 │   └── feature_registry.py       #   80 维特征元数据（中英文名/维度/方向/口径）
@@ -460,10 +476,11 @@ financial-risk-warning-platform/
 │   ├── package.json              #   vue / vue-router / echarts + vite 工具链
 │   ├── vite.config.ts            #   开发代理（/health /predict /finance /alerts ... → :8000）
 │   ├── src/api.ts                #   API 客户端 + TypeScript 类型契约
-│   ├── src/router.ts             #   九视图路由 + 登录页 + 路由守卫（按权限）
+│   ├── src/router.ts             #   12 视图路由 + 登录页 + 403 页 + 路由守卫（按权限点）
 │   ├── src/lib/theme.ts          #   全站配色常量 C + 主题 token（浅/深色自适应）
 │   ├── src/lib/levels.ts         #   风险等级 / 评级配色（取自 theme.ts 的 C）
-│   ├── src/views/                #   Dashboard / Enterprises / Enterprise / Alerts / Explain / Finance / Report / DataSource / Users / Login / Forbidden
+│   ├── src/views/                #   Dashboard / Enterprises / Enterprise / Alerts / Explain / Finance /
+│   │                             #   Report / Workspace（智能工作台）/ DataSource / Users / Login / Forbidden
 │   └── dist/                     #   构建产物（可直接静态托管）
 ├── desktop/                      # 🖥️ 桌面端（Electron + 内嵌 FastAPI）
 │   ├── main.js                   #   主进程：动态端口 / 拉起后端 / 健康检查 / 托盘 / 菜单
@@ -479,20 +496,20 @@ financial-risk-warning-platform/
 │   ├── incoming/csmar/           #   暂存区：raw/（规范单表+manifest）、desc/（字段说明）、批次目录
 │   ├── raw/                      #   契约层：ETL 唯一读取入口（candidates/ 存未激活增量）
 │   ├── cleaned/  feature_store/  external/  versioned/  demo_raw/
-├── docs/                         # 📚 文档（见下方"文档索引"）
-│   ├── desgin/                   #   调研报告、实施方案、开题蓝图、架构说明书、运维手册
-│   ├── CSMAR手动下载清单.md       #   表清单、筛选条件、命名规范、验收标准
-│   ├── CSMAR数据可行性报告.md     #   已到数据验证、字段级可用性、缺口与下载指引
-│   ├── 数据缺口与补齐清单_20261114.md  # 当前缺口、补齐动作、验收（最新口径）
-│   ├── 数据治理与目录规范.md      #   分层目录、命名、清洗规则、质量门、激活流程
-│   ├── 数据字典与特征口径.md      #   由注册表自动生成
-│   ├── Attachment/               #   论文交付包：论文_第1-4章.md / 论文_系统设计与实现.md /
-│   │   │                         #   论文_参考文献.md（正文稿）+ 论文_全文.docx（Word 版）
-│   │   └── ...                   #   毕业设计模板/样本/任务书等附件
-│   ├── 文献与资料调研清单.md      #   49 项资源清单与获取状态
-│   ├── resources_catalog.csv     #   资源清单（机器可读）
-│   ├── batch_download_resources.py
-│   └── README_资源批量下载工具.md
+├── docs/                         # 📚 文档（见下方"文档索引"与 docs/README.md）
+│   ├── README.md                 #   📌 文档中心：四分区全量索引 + 状态标记 + 取代关系
+│   ├── design/                   #   ① 研究与系统设计（19 篇 + adr/）：调研报告 / 实施方案 /
+│   │                             #   中期可行性分析 / 开题蓝图 / 架构说明书 / 运维手册 /
+│   │                             #   API 契约 / 模型卡片 / 测试矩阵 / Agent 设计 / 证据冻结清单 /
+│   │                             #   ADR-001~010 / 文档编写规范 / 项目诊断与开发建议书
+│   ├── analysis/                 #   ② 数据与可行性分析（7 篇）：CSMAR 下载清单 / 可行性报告 /
+│   │                             #   字段说明 / 数据查缺 / 缺口与补齐清单 / 补齐进展 / ST 标签核验
+│   ├── literature/               #   ③ 文献与资料：49 项资源清单 / 精读笔记 / papers/（29 篇 PDF 原文）
+│   ├── Attachment/               #   ④ 论文交付包：论文_第1-4章.md / 论文_系统设计与实现.md /
+│   │   │                         #   论文_参考文献.md + P 编号映射表 / 论文_全文.docx / 综述与理论奠基.md
+│   │   └── ...                   #   毕业设计模板/样本/任务书等附件（按 .gitignore 不入库）
+│   └── screenshots/              #   界面截图（dashboard / enterprises / enterprise / alerts /
+│                                 #   explain / finance / report）
 ├── notebooks/01_探索性分析.ipynb  # 📈 EDA：样本漏斗/标签/IV/SMD/PSI/基线/可行性评分卡
 ├── scripts/sync_raw_download.py   # 📥 落地区 → 暂存区：规范命名 + 分片拼接 + manifest
 ├── scripts/import_comscfi_official.py # 🔧 G-03：FS_Comscfi 官方折旧替换（幂等、备份）
@@ -559,7 +576,7 @@ financial-risk-warning-platform/
 | 宏观/行业 | 8 | GDP/M2/CPI/PPI/PMI、社融增速、行业 ROA 与杠杆偏离度 |
 | 数字化转型 | 7 | 数字化词频总强度、AI/区块链/云/大数据/应用词频、MD&A 数字化词频 |
 
-完整口径见 [`docs/数据字典与特征口径.md`](./docs/数据字典与特征口径.md)（由注册表自动生成）。
+完整口径见 [`docs/数据字典与特征口径.md`](./docs/design/数据字典与特征口径.md)（由注册表自动生成）。
 
 ### 四步特征筛选（当前真实数据）
 
@@ -611,7 +628,7 @@ financial-risk-warning-platform/
 > 作为对照，默认预算（30 trials，`run_id=20261114-211237-da08d92c`）验证 PR-AUC 0.3981、测试 PR-AUC **0.4268**。
 > 两者说明：**验证集只有 75 个正样本，继续加 trials 提升的是验证集排序而非泛化**；默认预算保持 30，报告时固定一次结果。
 >
-> **选型口径**：主模型按项目设定固定为 XGBoost（`selection.rule=designated_primary_model`），不按测试集挑模型；五模型验证/测试对比见 `models/artifacts/model_comparison.csv`，每次运行的模型与指标快照见 `models/artifacts/runs/<run_id>/`。详见 [`docs/训练评估口径与模型选择.md`](./docs/训练评估口径与模型选择.md)。
+> **选型口径**：主模型按项目设定固定为 XGBoost（`selection.rule=designated_primary_model`），不按测试集挑模型；五模型验证/测试对比见 `models/artifacts/model_comparison.csv`，每次运行的模型与指标快照见 `models/artifacts/runs/<run_id>/`。详见 [`docs/训练评估口径与模型选择.md`](./docs/design/训练评估口径与模型选择.md)。
 > 2024 锁箱未解锁，任何 2024/2026 指标均不在本表出现。
 
 ### 验证策略
@@ -672,31 +689,77 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 
 ## 📚 文档索引
 
-> 完整索引见 [`docs/README.md`](./docs/README.md)。
+> **完整索引见 [`docs/README.md`](./docs/README.md)**（四分区全量索引，每篇标注状态标记与取代关系）。
+
+### 📌 文档状态与索引约定
+
+本项目文档数量较多，为避免「不知道哪一份是当前口径」，`docs/` 下的每篇文档都在开头带**元信息块**，并使用统一状态标记：
+
+| 标记 | 含义 | 引用建议 |
+|---|---|---|
+| ✅ 已实现 | 与当前代码事实一致 | 可直接依赖 |
+| 📝 设计稿 | 方案已定稿，实现已完成或待补验收记录 | 读作「意图」，行为以代码为准 |
+| 📊 分析结论 | 某一時点诊断/评估结论 | 可能已被后续修复超越，引用前核对状态说明 |
+| 🔄 被取代 | 已被更新口径取代 | 仅作历史留存，禁止引用其数据 |
+| ⛔ 已废止 | 结论或路径已失效 | 禁止引用 |
+| 🟡 待决 | 问题已识别、方案已给出 | 按 ADR 标注的阶段执行 |
+
+**数字唯一真源**：[`docs/design/证据冻结清单.md`](./docs/design/证据冻结清单.md) —— 本 README、论文正文、首页数据块、评估报告中的每个指标都应能对应到其条目编号。
+**决策唯一出处**：[`docs/design/adr/`](./docs/design/adr/README.md) —— ADR-001~010 记录了所有关键技术取舍的背景、候选选项与后果。
+
+### 战略与决策
 
 | 文档 | 内容 |
 |------|------|
-| [`docs/desgin/系统架构设计说明书.md`](./docs/desgin/系统架构设计说明书.md) | 分层架构、模块职责、数据契约、接口设计、质量属性、演进路线 |
-| [`docs/desgin/平台使用与运维手册.md`](./docs/desgin/平台使用与运维手册.md) | 环境准备、五模块操作、数据更新 SOP、故障排查、答辩演示脚本 |
-| [`docs/desgin/上市公司财务风险智能预警平台_深度实施方案.md`](./docs/desgin/上市公司财务风险智能预警平台_深度实施方案.md) | 14 周实施计划、数据/模型/系统三层设计、风险预案 |
-| [`docs/desgin/上市公司财务风险智能预警平台_深度调研报告与文献综述.md`](./docs/desgin/上市公司财务风险智能预警平台_深度调研报告与文献综述.md) | 学术文献综述、工程实践调研、可行性论证 |
-| [`docs/desgin/开题报告_文献综述章节写作蓝图.md`](./docs/desgin/开题报告_文献综述章节写作蓝图.md) | 文献综述章节骨架、引用衔接、答辩预判问题 |
-| [`docs/desgin/开题报告_研究内容与技术路线写作蓝图.md`](./docs/desgin/开题报告_研究内容与技术路线写作蓝图.md) | 研究内容、关键问题、技术路线图（Mermaid/draw.io） |
-| [`docs/CSMAR手动下载清单.md`](./docs/CSMAR手动下载清单.md) | 13 张表的下载清单、筛选条件、命名规范、验收标准 |
-| [`docs/CSMAR数据可行性报告.md`](./docs/CSMAR数据可行性报告.md) | 已到数据验证结果、字段级可用性矩阵、缺口与补齐指引 |
-| [`docs/数据缺口与补齐清单_20261114.md`](./docs/数据缺口与补齐清单_20261114.md) | **最新口径**：12 项缺口、补齐动作、验收标准、可训练性判定 |
-| [`docs/数据治理与目录规范.md`](./docs/数据治理与目录规范.md) | 分层目录、命名规范、处理/清洗规则、G0–G5 质量门、候选激活流程 |
-| [`docs/训练评估口径与模型选择.md`](./docs/训练评估口径与模型选择.md) | 选型规则、指标口径、五模型验证/测试对比、30 vs 50 trials 过拟合证据 |
-| [`docs/平台功能与预测设计.md`](./docs/平台功能与预测设计.md) | 功能/预测/UI 设计、预测契约、现状缺陷清单、路线图 |
-| [`docs/FastAPI服务层设计.md`](./docs/FastAPI服务层设计.md) | API 契约、异常映射、部署、与前端集成方案 |
-| [`docs/前端架构与图表方案.md`](./docs/前端架构与图表方案.md) | Streamlit 壳 + FastAPI 服务层 + Plotly/ECharts 混合渲染、ECharts 本地化 |
-| [`docs/Attachment/论文_系统设计与实现.md`](./docs/Attachment/论文_系统设计与实现.md) | **论文正文稿**：第 5 章 系统设计与实现（总体架构/前端/服务/图表/选型） |
+| [`docs/design/项目诊断与开发建议书.md`](./docs/design/项目诊断与开发建议书.md) | **五维基线 + 11 项问题清单（含证据与严重度）+ 5 阶段路线图 + 遗留项** |
+| [`docs/design/开发路线图与里程碑.md`](./docs/design/开发路线图与里程碑.md) | P0–P4 任务、交付物、验收标准、风险预案与 13 步复现清单 |
+| [`docs/design/证据冻结清单.md`](./docs/design/证据冻结清单.md) | **所有指标数字的唯一真源**（数据/切分/模型/解释四层 + 五处载体同步清单） |
+| [`docs/design/adr/README.md`](./docs/design/adr/README.md) | 架构决策记录 ADR-001~010（背景/选项/决策/后果/状态） |
+| [`docs/design/文档编写规范.md`](./docs/design/文档编写规范.md) | 元信息块模板、状态语义、分区职责、新增与失效文档流程 |
+
+### 研究与论文
+
+| 文档 | 内容 |
+|------|------|
+| [`docs/design/中期可行性分析与建议方案设计.md`](./docs/design/中期可行性分析与建议方案设计.md) | 中期交付诊断（5 项必修复项，**4 项已落地**）与交付清单 |
+| [`docs/design/上市公司财务风险智能预警平台_深度调研报告与文献综述.md`](./docs/design/上市公司财务风险智能预警平台_深度调研报告与文献综述.md) | 学术文献综述、工程实践调研、可行性论证 |
+| [`docs/Attachment/上市公司财务风险预警_文献综述与理论奠基.md`](./docs/Attachment/上市公司财务风险预警_文献综述与理论奠基.md) | **99KB 证据底稿**：23 篇本地 PDF、三级证据强度、四层理论框架与 7 条命题 |
+| [`docs/design/开题报告_文献综述章节写作蓝图.md`](./docs/design/开题报告_文献综述章节写作蓝图.md) | 文献综述章节骨架、引用衔接、答辩预判问题 |
+| [`docs/design/开题报告_研究内容与技术路线写作蓝图.md`](./docs/design/开题报告_研究内容与技术路线写作蓝图.md) | 研究内容、关键问题、技术路线图（Mermaid/draw.io） |
 | [`docs/Attachment/论文_第1-4章.md`](./docs/Attachment/论文_第1-4章.md) | **论文正文稿**：第 1–4 章（绪论含文献综述/相关技术/数据与特征/模型） |
-| [`docs/Attachment/论文_参考文献.md`](./docs/Attachment/论文_参考文献.md) | **论文参考文献**：GB/T 7714，正文 [1]–[14] 对应 |
+| [`docs/Attachment/论文_系统设计与实现.md`](./docs/Attachment/论文_系统设计与实现.md) | **论文正文稿**：第 5 章 系统设计与实现（总体架构/前端/服务/图表/选型） |
+| [`docs/Attachment/论文_参考文献.md`](./docs/Attachment/论文_参考文献.md) | **论文参考文献**：GB/T 7714-2015 / APA 7th |
+| [`docs/Attachment/论文_参考文献_P编号映射表.md`](./docs/Attachment/论文_参考文献_P编号映射表.md) | P 编号 ↔ 论文引用编号双向映射与证据等级 |
 | [`docs/Attachment/论文_全文.docx`](./docs/Attachment/论文_全文.docx) | **论文 Word 版**：封面 + 原创性声明 + 第 1–5 章 + 参考文献，含目录、A4、宋体/黑体、三线表 |
-| [`docs/数据字典与特征口径.md`](./docs/数据字典与特征口径.md) | 80 维特征定义、数据表结构、缺失处理规则 |
-| [`docs/文献与资料调研清单.md`](./docs/文献与资料调研清单.md) | 49 项文献/代码/数据资源清单、检索策略、获取状态与缺口 |
-| [`docs/README_资源批量下载工具.md`](./docs/README_资源批量下载工具.md) | 批量下载工具使用说明 |
+
+### 系统设计与工程契约
+
+| 文档 | 内容 |
+|------|------|
+| [`docs/design/系统架构设计说明书.md`](./docs/design/系统架构设计说明书.md) | 分层架构、模块职责、数据契约、接口设计、质量属性、演进路线 |
+| [`docs/design/API契约与接口参考.md`](./docs/design/API契约与接口参考.md) | **100+ 端点完整契约**、鉴权中间件顺序、错误映射、前端视图对照 |
+| [`docs/design/LLM-Agent与MCP设计说明.md`](./docs/design/LLM-Agent与MCP设计说明.md) | Agent 循环、19 个内置工具、审批与安全边界、MCP 双向接入、扩展指南 |
+| [`docs/design/模型卡片与模型注册表规范.md`](./docs/design/模型卡片与模型注册表规范.md) | 模型卡片模板、四态注册表、晋级门槛（MLflow 的轻量替代） |
+| [`docs/design/测试策略与覆盖矩阵.md`](./docs/design/测试策略与覆盖矩阵.md) | 测试分层、模块↔测试↔CI 矩阵、未覆盖风险区、CI 增强建议 |
+| [`docs/design/上市公司财务风险智能预警平台_深度实施方案.md`](./docs/design/上市公司财务风险智能预警平台_深度实施方案.md) | 数据/模型/系统三层设计与风险预案（路线已收敛至《开发路线图》） |
+| [`docs/design/大屏平台开发设计方案.md`](./docs/design/大屏平台开发设计方案.md) | 展示层设计：12 视图与交互规范 |
+| [`docs/design/平台优化设计方案_用户权限与实时接入_20261117.md`](./docs/design/平台优化设计方案_用户权限与实时接入_20261117.md) | 认证、RBAC、审计、SSE 三通道接入方案 |
+| [`docs/design/平台功能与预测设计.md`](./docs/design/平台功能与预测设计.md) | 功能/预测/UI 设计、预测契约、现状缺陷清单 |
+| [`docs/design/前端架构与图表方案.md`](./docs/design/前端架构与图表方案.md) | Streamlit 壳 + FastAPI 服务层 + Plotly/ECharts 混合渲染、ECharts 本地化 |
+| [`docs/design/平台使用与运维手册.md`](./docs/design/平台使用与运维手册.md) | 环境准备、操作说明、数据更新 SOP、故障排查、答辩演示脚本 |
+| [`docs/design/训练评估口径与模型选择.md`](./docs/design/训练评估口径与模型选择.md) | 选型规则、指标口径、五模型验证/测试对比、30 vs 50 trials 过拟合证据 |
+
+### 数据与文献
+
+| 文档 | 内容 |
+|------|------|
+| [`docs/analysis/CSMAR手动下载清单.md`](./docs/analysis/CSMAR手动下载清单.md) | 13 张表的下载清单、筛选条件、命名规范、验收标准 |
+| [`docs/analysis/CSMAR数据可行性报告.md`](./docs/analysis/CSMAR数据可行性报告.md) | 已到数据验证结果、字段级可用性矩阵、缺口与下载指引 |
+| [`docs/analysis/数据缺口与补齐清单_20261114.md`](./docs/analysis/数据缺口与补齐清单_20261114.md) | **最新口径**：12 项缺口、补齐动作、验收标准、可训练性判定 |
+| [`docs/analysis/数据查缺与可行性分析_20261114.md`](./docs/analysis/数据查缺与可行性分析_20261114.md) | 逐字段缺失率与可得性核查 |
+| [`docs/design/数据治理与目录规范.md`](./docs/design/数据治理与目录规范.md) | 分层目录、命名规范、处理/清洗规则、G0–G5 质量门、候选激活流程 |
+| [`docs/design/数据字典与特征口径.md`](./docs/design/数据字典与特征口径.md) | 80 维特征定义、数据表结构、缺失处理规则（自动生成） |
+| [`docs/literature/文献与资料调研清单.md`](./docs/literature/文献与资料调研清单.md) | 49 项文献/代码/数据资源清单、检索策略、获取状态与缺口 |
 | [`data/README.md`](./data/README.md) | 数据结构、字段约定、替换真实数据步骤 |
 
 ---
@@ -748,13 +811,22 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 | 数据实时接入 | ✅ | 定时拉取 + API Key 推送 + SSE 事件流 + 接入后重打分闭环 |
 | 论文文档 | ✅ | 第 1–5 章正文稿 + 参考文献 + Word 版（`docs/Attachment/论文_全文.docx`） |
 | 工程化 | ✅ | 115 项测试、Docker、Makefile、文档自动生成 |
-| 待办 | ⬜ | 2024 锁箱（等 2026 官方标签）、扣非净利润官方口径核验（FI_Indicators）、2025 MD&A 文本、在线增量更新、模型注册表（MLflow） |
+| LLM-Agent 与 MCP | ✅ | Agent 循环（5 步上限 / 19 内置工具 / 写操作审批）+ MCP 双向接入 + 插件与技能 + 工作台 |
+| **文档体系治理** | ✅ | `docs/desgin`→`docs/design`、`docs/附件`→`docs/Attachment`、四分区全量索引 + 状态标记、ADR-001~010、API 契约 / 模型卡片 / 测试矩阵 / Agent 设计 / 证据冻结清单（详见 [`docs/README.md`](./docs/README.md)） |
+| **预处理无泄漏化** | ⬜ | `etl/clean_financial.py` 三处统计量改为训练期估计（ADR-007），需重跑并同步全部指标（ADR-010） |
+| **稳健性证据链** | ⬜ | 消融 / 标签敏感性 / 样本敏感性 / SHAP 排名稳定性 四件套进论文第 4 章（P1） |
+| **参考文献扩展** | ⬜ | 论文参考文献 14 条 → 覆盖综述底稿 23 篇 + P 编号映射表 |
+| 待办 | ⬜ | 2024 锁箱（等 2026 官方标签）、扣非净利润官方口径核验（FI_Indicators）、2025 MD&A 文本、在线增量更新、模型注册表（已由《模型卡片与模型注册表规范》给出轻量替代路径） |
 
 ---
 
 <a id="references"></a>
 
 ## 📖 参考文献
+
+> **口径说明**：论文正文引用编号为 **[1]–[14]**，完整条目见 [`docs/Attachment/论文_参考文献.md`](./docs/Attachment/论文_参考文献.md)；本表为项目核心方法学文献的精简列示。
+> 综述的**完整证据基础**（23 篇本地 PDF，按 A/B/C 三级证据强度）见 [`docs/Attachment/上市公司财务风险预警_文献综述与理论奠基.md`](./docs/Attachment/上市公司财务风险预警_文献综述与理论奠基.md)，编号 ↔ 论文引用编号的映射见 [`docs/Attachment/论文_参考文献_P编号映射表.md`](./docs/Attachment/论文_参考文献_P编号映射表.md)。
+> 全部资源（文献 + 代码库 + 数据平台，49 项）见 [`docs/literature/文献与资料调研清单.md`](./docs/literature/文献与资料调研清单.md)。
 
 1. Altman, E. I. (1968). Financial Ratios, Discriminant Analysis and the Prediction of Corporate Bankruptcy. *The Journal of Finance*, 23(4), 589–609.
 2. Beaver, W. H. (1966). Financial Ratios as Predictors of Failure. *Journal of Accounting Research*, 4, 71–111.
@@ -767,7 +839,7 @@ Level 3  稳健性：换标签定义 / 换特征集 / 换模型 / 换匹配比�
 9. Chen, T., & Guestrin, C. (2016). XGBoost: A Scalable Tree Boosting System. *KDD*, 785–794.
 10. Akiba, T., et al. (2019). Optuna: A Next-generation Hyperparameter Optimization Framework. *KDD*, 2623–2631.
 
-完整文献清单（含中文文献、技术博客、开源项目、数据平台）见 [`docs/文献与资料调研清单.md`](./docs/文献与资料调研清单.md)。
+> 📌 **所有指标数字以 [`docs/design/证据冻结清单.md`](./docs/design/证据冻结清单.md) 为唯一真源**，本 README、论文正文、首页数据块与评估报告均应可回溯到该清单条目。
 
 ---
 

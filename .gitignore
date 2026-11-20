@@ -82,7 +82,10 @@ cachedir/
 # ---- 落地区：CSMAR 原始包（只读、体积大）----
 DATA_RAW_Download/
 CSMAR_download/
-docs/附件
+# ---- 论文附件：学校模板与个人材料不入库（论文正文与 Word 版入库）----
+docs/Attachment/毕业设计*
+docs/Attachment/毕设*
+docs/Attachment/维普系统_学生.docx
 
 # ---- 暂存区：规范化中间表与批次归档 ----
 data/incoming/csmar/*.csv
@@ -118,11 +121,7 @@ reports/*
 catboost_info/
 
 # ---- 文献与资料：克隆仓库、截图、机翻 PDF ----
-docs/downloads/repos/
-docs/downloads/**/*.png
-docs/downloads/**/*.jpg
-docs/downloads/**/*.jpeg
-docs/downloads/papers/*translat*.pdf
+docs/literature/papers/*translat*.pdf
 
 # ---- 日志与临时文件 ----
 *.log
